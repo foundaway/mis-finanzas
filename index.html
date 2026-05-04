@@ -1,0 +1,3124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1C1C1E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FinanzasMX" />
+  <title>Finance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+
+  <style>
+    /* --- Drive Sync Bar --- */
+    .drive-bar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);flex-wrap:wrap;position:sticky;top:0;z-index:200}
+    .drive-status{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+    .drive-dot{width:8px;height:8px;border-radius:50%;background:#6C6C70;flex-shrink:0;transition:background .3s}
+    .drive-dot.on{background:#32D74B}
+    .drive-dot.busy{background:#FF9F0A;animation:dblink .7s infinite alternate}
+    .drive-dot.err{background:#FF453A}
+    @keyframes dblink{from{opacity:.3}to{opacity:1}}
+    .drive-info{min-width:0}
+    .drive-user{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+    .drive-sub{font-size:11px;color:var(--text2)}
+    .db-btn{padding:6px 12px;border:1.5px solid var(--border);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+    .db-btn:hover{background:var(--bg3)}
+    .db-btn:disabled{opacity:.35;cursor:default}
+    .db-btn.login{color:#3A82F7;border-color:#3A82F7;background:rgba(58,130,247,.1)}
+    .db-btn.up{color:#32D74B;border-color:#32D74B;background:rgba(50,215,75,.1)}
+    .db-btn.dn{color:#3A82F7;border-color:#3A82F7;background:rgba(58,130,247,.1)}
+    .db-btn.out{color:var(--text2)}
+    /* ─── Reset & Base ──────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F2F2F7;
+      --bg2:       #FFFFFF;
+      --bg3:       #E5E5EA;
+      --text:      #1C1C1E;
+      --text2:     #6C6C70;
+      --text3:     #AEAEB2;
+      --blue:      #3A82F7;
+      --green:     #32D74B;
+      --amber:     #FF9F0A;
+      --red:       #FF453A;
+      --purple:    #BF5AF2;
+      --border:    rgba(0,0,0,0.08);
+      --shadow:    0 2px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+      --radius:    16px;
+      --radius-sm: 10px;
+      --tabbar:    64px;
+      --safe-b:    env(safe-area-inset-bottom, 0px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:     #1C1C1E;
+        --bg2:    #2C2C2E;
+        --bg3:    #3A3A3C;
+        --text:   #FFFFFF;
+        --text2:  #AEAEB2;
+        --text3:  #6C6C70;
+        --border: rgba(255,255,255,0.08);
+        --shadow: 0 2px 12px rgba(0,0,0,0.4);
+        --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      }
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    /* ─── Layout ────────────────────────────────────────────────── */
+    #app { display: flex; flex-direction: column; height: 100%; }
+
+    .page {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 16px 16px calc(var(--tabbar) + var(--safe-b) + 16px);
+      -webkit-overflow-scrolling: touch;
+    }
+    .page.active { display: block; }
+
+    /* ─── Tab Bar ───────────────────────────────────────────────── */
+    #tabbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: calc(var(--tabbar) + var(--safe-b));
+      padding-bottom: var(--safe-b);
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .tab-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text3);
+      font-size: 10px;
+      font-weight: 500;
+      font-family: inherit;
+      transition: color 0.2s;
+      padding: 8px 4px;
+    }
+    .tab-btn.active { color: var(--blue); }
+    .tab-btn svg { width: 22px; height: 22px; }
+
+    /* ─── Page Header ───────────────────────────────────────────── */
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      letter-spacing: -0.5px;
+    }
+
+    /* ─── Cards ─────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg2);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+    }
+    .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text2);
+      margin-bottom: 6px;
+    }
+    .card-value {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .card-sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+
+    /* ─── Summary Grid ──────────────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .summary-grid .card { margin-bottom: 0; }
+
+    /* ─── Donut Chart ───────────────────────────────────────────── */
+    #donut-wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    #donut-svg  { flex-shrink: 0; width: 140px; height: 140px; }
+    #donut-legend { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .legend-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .legend-label { color: var(--text2); flex: 1; }
+    .legend-pct   { font-weight: 600; }
+
+    /* ─── Status Pill ───────────────────────────────────────────── */
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+    }
+    .status-pill.green { background: rgba(50,215,75,0.15);  color: var(--green); }
+    .status-pill.amber { background: rgba(255,159,10,0.15); color: var(--amber); }
+    .status-pill.red   { background: rgba(255,69,58,0.15);  color: var(--red);   }
+
+    /* ─── Forms ─────────────────────────────────────────────────── */
+    .form-section {
+      background: var(--bg2);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .form-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+
+    .field { margin-bottom: 12px; }
+    .field label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text2); text-transform: uppercase;
+      letter-spacing: 0.4px; margin-bottom: 6px;
+    }
+    .field input, .field select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1.5px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      font-size: 15px; font-family: inherit; color: var(--text);
+      outline: none; transition: border-color 0.2s;
+      -webkit-appearance: none; appearance: none;
+    }
+    .field input:focus, .field select:focus { border-color: var(--blue); }
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23AEAEB2' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 13px center;
+      padding-right: 36px;
+    }
+
+    /* Two-col fields */
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .field-row .field { margin-bottom: 0; }
+
+    .btn-primary {
+      width: 100%; background: var(--blue); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      padding: 13px; font-size: 15px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-primary:active { opacity: 0.8; }
+
+    /* ─── List Items ────────────────────────────────────────────── */
+    .list-section h3 {
+      font-size: 13px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px; color: var(--text2); margin-bottom: 10px;
+    }
+    .list-item {
+      background: var(--bg2); border-radius: var(--radius-sm);
+      padding: 13px 14px; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: var(--shadow); gap: 10px;
+    }
+    .list-item-info { flex: 1; min-width: 0; }
+    .list-item-name {
+      font-size: 14px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .list-item-meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .list-item-amount { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; }
+
+    .btn-icon {
+      background: none; border: none; cursor: pointer;
+      padding: 4px; border-radius: 6px;
+      display: flex; align-items: center; transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-icon:active { opacity: 0.5; }
+    .btn-delete { color: var(--red); }
+    .btn-edit   { color: var(--blue); }
+
+    .empty-state { text-align: center; padding: 32px 16px; color: var(--text3); font-size: 14px; }
+
+    /* ─── Badges ────────────────────────────────────────────────── */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-cat { background: var(--bg3); color: var(--text2); }
+    /* Credit card badge */
+    .badge-cc  { background: rgba(191,90,242,0.15); color: var(--purple); }
+    .badge-cash{ background: rgba(50,215,75,0.12);  color: var(--green);  }
+
+    /* ─── Loans ─────────────────────────────────────────────────── */
+    .loan-card {
+      background: var(--bg2); border-radius: var(--radius);
+      padding: 16px; box-shadow: var(--shadow); margin-bottom: 10px;
+    }
+    .loan-card-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .loan-name   { font-size: 16px; font-weight: 600; }
+    .loan-monthly{ font-size: 24px; font-weight: 700; color: var(--amber); }
+    .loan-weekly { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+    /* Inline edit row */
+    .loan-edit-row {
+      display: none; margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--border);
+      align-items: center; gap: 10px;
+    }
+    .loan-edit-row.open { display: flex; }
+    .loan-edit-row input {
+      flex: 1;
+      background: var(--bg3); border: 1.5px solid var(--blue);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+      font-size: 15px; font-family: inherit; color: var(--text);
+      outline: none;
+    }
+    .btn-save {
+      background: var(--blue); color: #fff; border: none;
+      border-radius: var(--radius-sm); padding: 10px 16px;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer; white-space: nowrap;
+    }
+    .btn-cancel {
+      background: var(--bg3); color: var(--text2); border: none;
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer;
+    }
+
+    /* ─── Progress Bar ──────────────────────────────────────────── */
+    .progress-bar-wrap { background: var(--bg3); border-radius: 6px; height: 8px; overflow: hidden; margin-top: 10px; }
+    .progress-bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
+
+    /* ─── Slider ────────────────────────────────────────────────── */
+    .slider-wrap { display: flex; align-items: center; gap: 12px; }
+    input[type=range] {
+      flex: 1; -webkit-appearance: none; appearance: none;
+      height: 4px; background: var(--bg3); border-radius: 2px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 22px; height: 22px;
+      border-radius: 50%; background: var(--blue); cursor: pointer;
+      box-shadow: 0 2px 6px rgba(58,130,247,0.4);
+    }
+    .slider-val { font-size: 18px; font-weight: 700; color: var(--blue); min-width: 40px; text-align: right; }
+
+    /* ─── Weekly check-in ───────────────────────────────────────── */
+    .checkin-result .row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .checkin-result .row:last-child { border-bottom: none; }
+    .checkin-result .row-label { font-size: 14px; color: var(--text2); }
+    .checkin-result .row-val   { font-size: 18px; font-weight: 700; }
+
+    /* ─── Big card ──────────────────────────────────────────────── */
+    .big-card {
+      background: linear-gradient(135deg, var(--blue) 0%, #5B6CF9 100%);
+      border-radius: var(--radius); padding: 20px; color: #fff;
+      margin-bottom: 12px; box-shadow: 0 8px 24px rgba(58,130,247,0.35);
+    }
+    .big-card .card-label { color: rgba(255,255,255,0.7); }
+    .big-card .card-value { color: #fff; font-size: 36px; }
+    .big-card .card-sub   { color: rgba(255,255,255,0.7); }
+
+    /* ─── CC summary card ───────────────────────────────────────── */
+    .cc-summary {
+      background: rgba(191,90,242,0.1);
+      border: 1.5px solid rgba(191,90,242,0.25);
+      border-radius: var(--radius); padding: 14px 16px;
+      margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cc-summary-label { font-size: 13px; color: var(--purple); font-weight: 600; }
+    .cc-summary-val   { font-size: 20px; font-weight: 700; color: var(--purple); }
+
+    /* ─── Date Pills ────────────────────────────────────────────── */
+    .date-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+    .date-pill.urgent  { background: rgba(255,69,58,0.13);  color: var(--red);   }
+    .date-pill.warning { background: rgba(255,159,10,0.13); color: var(--amber); }
+    .date-pill.ok      { background: rgba(50,215,75,0.13);  color: var(--green); }
+
+    /* ─── Payment Card (loans + TDC) ────────────────────────────── */
+    .pay-card {
+      background: var(--bg2); border-radius: var(--radius);
+      padding: 16px; box-shadow: var(--shadow); margin-bottom: 10px;
+    }
+    .pay-card-top {
+      display: flex; align-items: flex-start;
+      justify-content: space-between; gap: 10px;
+    }
+    .pay-card-title  { font-size: 16px; font-weight: 600; }
+    .pay-card-sub    { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .pay-card-amount { font-size: 22px; font-weight: 700; white-space: nowrap; }
+    .pay-card-actions { display: flex; align-items: center; gap: 6px; margin-left: 4px; flex-shrink: 0; }
+
+    .pay-card-dates {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .date-block { display: flex; flex-direction: column; gap: 4px; }
+    .date-block-label { font-size: 11px; font-weight: 600; text-transform: uppercase;
+                        letter-spacing: 0.4px; color: var(--text3); }
+    .date-block-date  { font-size: 13px; font-weight: 600; color: var(--text); }
+
+    /* Section divider inside tab */
+    .tab-section-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--text2);
+      margin: 20px 0 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .tab-section-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* Credit limit bar */
+    .limit-bar-wrap { margin-top: 10px; }
+    .limit-bar-labels {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: var(--text2); margin-bottom: 5px;
+    }
+    .limit-bar-labels strong { font-weight: 700; }
+
+    /* ─── Expandable panels (history, card expenses) ────────────── */
+    .expand-panel {
+      display: none; margin-top: 12px; padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .expand-panel.open { display: block; }
+
+    /* Mini form inside a card */
+    .mini-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+    .mini-form input, .mini-form select {
+      background: var(--bg3); border: 1.5px solid transparent;
+      border-radius: var(--radius-sm); padding: 9px 12px;
+      font-size: 14px; font-family: inherit; color: var(--text);
+      outline: none; transition: border-color 0.2s;
+      -webkit-appearance: none; appearance: none; width: 100%;
+    }
+    .mini-form input:focus, .mini-form select:focus { border-color: var(--blue); }
+    .mini-form select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23AEAEB2' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 11px center; padding-right: 32px;
+    }
+    .mini-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn-mini-add {
+      background: var(--blue); color: #fff; border: none;
+      border-radius: var(--radius-sm); padding: 9px 14px;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+    }
+    .btn-mini-add:active { opacity: 0.8; }
+    .btn-mini-secondary {
+      background: var(--bg3); color: var(--text2); border: none;
+      border-radius: var(--radius-sm); padding: 9px 14px;
+      font-size: 13px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+
+    /* Expense row inside card */
+    .card-exp-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid var(--border); gap: 8px;
+    }
+    .card-exp-item:last-of-type { border-bottom: none; }
+    .card-exp-name  { font-size: 13px; font-weight: 600; flex: 1; min-width: 0;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-exp-meta  { font-size: 11px; color: var(--text2); }
+    .card-exp-amount{ font-size: 13px; font-weight: 700; color: var(--red); white-space: nowrap; }
+
+    /* Loan payment history */
+    .history-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid var(--border); gap: 8px;
+    }
+    .history-row:last-of-type { border-bottom: none; }
+    .history-month  { font-size: 13px; color: var(--text2); }
+    .history-amount { font-size: 14px; font-weight: 700; color: var(--amber); }
+    .history-note   { font-size: 11px; color: var(--text3); margin-top: 1px; }
+
+    /* Toggle row button */
+    .btn-toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; background: none; border: none; cursor: pointer;
+      font-family: inherit; color: var(--blue);
+      font-size: 12px; font-weight: 600; padding: 8px 0 0;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .btn-toggle-row svg { transition: transform 0.2s; }
+    .btn-toggle-row.open svg { transform: rotate(180deg); }
+
+    /* ─── Animations ────────────────────────────────────────────── */
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .page.active { animation: fadeSlideIn 0.2s ease; }
+
+    /* ─── Toast ─────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(var(--tabbar) + var(--safe-b) + 16px);
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--text); color: var(--bg);
+      padding: 10px 20px; border-radius: 20px;
+      font-size: 14px; font-weight: 500;
+      opacity: 0; transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none; z-index: 200; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+
+<body>
+
+<!-- DRIVE SYNC BAR -->
+<div class="drive-bar" id="drive-bar" style="display:none">
+  <div class="drive-status">
+    <div class="drive-dot" id="drive-dot"></div>
+    <div class="drive-info">
+      <div class="drive-user" id="drive-user">Sin sesión</div>
+      <div class="drive-sub" id="drive-sub">Conecta Google Drive para sincronizar</div>
+    </div>
+  </div>
+  <button class="db-btn login" id="btn-login" onclick="driveLogin()">Iniciar sesión</button>
+  <button class="db-btn up" id="btn-up" onclick="driveUpload()" style="display:none" disabled>↑ Subir</button>
+  <button class="db-btn dn" id="btn-dn" onclick="driveDownload()" style="display:none" disabled>↓ Bajar</button>
+  <button class="db-btn out" id="btn-out" onclick="driveLogout()" style="display:none">Salir</button>
+</div>
+
+<!-- DRIVE SETUP (oculto en settings, se activa con botón) -->
+<div id="drive-setup-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:1rem">
+  <div style="background:var(--bg2);border-radius:16px;padding:1.25rem;width:100%;max-width:380px">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:.5rem">Conectar Google Drive</h3>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:.75rem">
+      Pega tu Client ID de Google OAuth2. Tus datos se guardan en tu propio Drive.
+    </p>
+    <input type="text" id="drive-cid-input" placeholder="xxxxx.apps.googleusercontent.com"
+      style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;outline:none;margin-bottom:10px"/>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="document.getElementById('drive-setup-modal').style.display='none'"
+        style="padding:8px 14px;border:1.5px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Cancelar</button>
+      <button onclick="saveDriveCID()"
+        style="padding:8px 16px;border:none;border-radius:8px;background:#3A82F7;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Guardar</button>
+    </div>
+  </div>
+</div>
+<div id="app">
+
+  <!-- ════════════════ DASHBOARD ════════════════ -->
+  <div id="page-dashboard" class="page active">
+    <h1 class="page-title">Panel</h1>
+
+    <!-- View toggle -->
+    <div style="display:flex;background:var(--bg3);border-radius:10px;padding:3px;margin-bottom:14px;">
+      <button id="view-btn-weekly" onclick="setViewMode('weekly')"
+              style="flex:1;padding:7px;border:none;border-radius:8px;font-size:13px;font-weight:600;
+                     font-family:inherit;cursor:pointer;background:var(--blue);color:#fff;transition:.2s;">
+        Esta semana
+      </button>
+      <button id="view-btn-monthly" onclick="setViewMode('monthly')"
+              style="flex:1;padding:7px;border:none;border-radius:8px;font-size:13px;font-weight:600;
+                     font-family:inherit;cursor:pointer;background:transparent;color:var(--text2);transition:.2s;">
+        Este mes
+      </button>
+    </div>
+
+    <!-- Register this week's pay (weekly mode only) -->
+    <div id="d-weekly-pay-card" class="card" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text2);">
+        💰 Registrar nómina de esta semana
+      </div>
+      <div id="d-weekly-pay-current" style="margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="number" id="d-wpay-amount" placeholder="Monto recibido ($)"
+               min="0" step="0.01" inputmode="decimal"
+               style="flex:1;background:var(--bg3);border:1.5px solid transparent;
+                      border-radius:var(--radius-sm);padding:9px 12px;font-size:15px;
+                      font-family:inherit;color:var(--text);outline:none;"
+               onfocus="this.style.borderColor='var(--blue)'"
+               onblur="this.style.borderColor='transparent'" />
+        <button onclick="addWeeklyPay()"
+                style="background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);
+                       padding:9px 16px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">
+          ✓
+        </button>
+      </div>
+      <input type="text" id="d-wpay-note" placeholder="Nota (ej. Semana con tiempo extra)"
+             style="width:100%;margin-top:6px;background:var(--bg3);border:1.5px solid transparent;
+                    border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;
+                    font-family:inherit;color:var(--text);outline:none;"
+             onfocus="this.style.borderColor='var(--blue)'"
+             onblur="this.style.borderColor='transparent'" />
+    </div>
+
+    <div class="big-card">
+      <div class="card-label" id="d-available-label">Disponible esta semana</div>
+      <div class="card-value" id="d-available">$0</div>
+      <div class="card-sub" id="d-available-sub">—</div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="card">
+        <div class="card-label">Ingresos</div>
+        <div class="card-value" id="d-income" style="color:var(--green);font-size:22px">$0</div>
+        <div class="card-sub" id="d-income-sub">esta semana</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Gastos</div>
+        <div class="card-value" id="d-expenses" style="color:var(--red);font-size:22px">$0</div>
+        <div class="card-sub" id="d-expenses-sub">esta semana</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Compromisos</div>
+        <div class="card-value" id="d-loans" style="color:var(--amber);font-size:22px">$0</div>
+        <div class="card-sub" id="d-loans-sub">esta semana</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Ahorro meta</div>
+        <div class="card-value" id="d-savings" style="color:var(--blue);font-size:22px">$0</div>
+        <div class="card-sub" id="d-savings-pct">15% del ingreso</div>
+      </div>
+    </div>
+
+    <!-- CC total highlight -->
+    <div class="cc-summary" id="d-cc-wrap" style="display:none">
+      <div>
+        <div class="cc-summary-label">💳 Gastos en tarjeta de crédito</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px" id="d-cc-sub">incluidos en gastos</div>
+      </div>
+      <div class="cc-summary-val" id="d-cc-total">$0</div>
+    </div>
+
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div class="card-label">Estado del presupuesto</div>
+        <div id="d-status-pill" class="status-pill green">
+          <span>●</span><span id="d-status-txt">Saludable</span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-label" id="d-limit-label">Disponible / día</div>
+        <div id="d-weekly" style="font-size:20px;font-weight:700">$0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label" style="margin-bottom:12px">Distribución del presupuesto</div>
+      <div id="donut-wrap">
+        <svg id="donut-svg" viewBox="0 0 140 140">
+          <g id="donut-slices"></g>
+          <text id="donut-center-val" x="70" y="68" text-anchor="middle"
+            font-size="17" font-weight="700" fill="var(--text)">$0</text>
+          <text id="donut-center-sub" x="70" y="83" text-anchor="middle" font-size="10" fill="var(--text2)">ingresos</text>
+        </svg>
+        <div id="donut-legend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label" id="d-savings-label">Meta de ahorro semanal</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px;">
+        <div id="d-savings-have" style="font-size:18px;font-weight:700">$0 disponible</div>
+        <div id="d-savings-goal" style="font-size:13px;color:var(--text2)">meta: $0</div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="d-savings-bar" style="width:0%;background:var(--green)"></div>
+      </div>
+    </div>
+
+    <!-- ── MONEDEROS ── -->
+    <div id="d-wallets-wrap" style="display:none;margin-top:4px;">
+      <div class="tab-section-title" style="margin-top:8px;">🎫 Saldo de monederos</div>
+      <div id="d-wallets-list"></div>
+    </div>
+
+    <!-- ── RESUMEN DE DEUDAS ── -->
+    <div id="d-debts-wrap" style="display:none;margin-top:4px;">
+      <div class="tab-section-title" style="margin-top:8px;">🚨 Qué pagar primero</div>
+      <div id="d-debts-list"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════ INCOME ════════════════ -->
+  <div id="page-income" class="page">
+    <h1 class="page-title">Ingresos</h1>
+
+    <!-- ── NÓMINA SEMANAL ── -->
+    <div class="tab-section-title">📅 Historial de nómina semanal</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+      Registra tu pago real cada semana desde el Panel principal. Aquí puedes ver y borrar el historial.
+    </div>
+    <div id="weekly-pay-history"></div>
+
+    <div class="tab-section-title" style="margin-top:20px;">💰 Ingresos fijos</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.5;">
+      Ingresos recurrentes y predecibles (vales, renta, freelance fijo, etc). La nómina variable va arriba.
+    </div>
+
+    <div class="form-section">
+      <h3>Agregar ingreso fijo</h3>
+      <div class="field">
+        <label>Descripción</label>
+        <input type="text" id="inc-desc" placeholder="Ej. Salario, freelance…" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Monto ($MXN)</label>
+          <input type="number" id="inc-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label>Frecuencia</label>
+          <select id="inc-freq">
+            <option value="monthly">Mensual</option>
+            <option value="biweekly">Quincenal</option>
+            <option value="weekly">Semanal</option>
+            <option value="once">Única vez</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addIncome()">Agregar ingreso</button>
+    </div>
+
+    <div class="list-section">
+      <h3>Mis ingresos</h3>
+      <div id="income-list"></div>
+    </div>
+
+    <div class="card" style="text-align:center;">
+      <div class="card-label">Total ingreso mensual normalizado</div>
+      <div class="card-value" id="inc-total" style="color:var(--green)">$0</div>
+    </div>
+
+    <!-- ── MONEDEROS / VALES ── -->
+    <div class="tab-section-title" style="margin-top:24px;">🎫 Monederos / Vales</div>
+    <div class="form-section">
+      <h3>Agregar monedero</h3>
+      <div class="field">
+        <label>Nombre (ej. Vales de despensa Edenred)</label>
+        <input type="text" id="wallet-name" placeholder="Vales de despensa" />
+      </div>
+      <div class="field">
+        <label>Recarga mensual ($MXN)</label>
+        <input type="number" id="wallet-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+      </div>
+      <button class="btn-primary" onclick="addWallet()">Agregar monedero</button>
+    </div>
+    <div class="list-section">
+      <div id="wallet-list"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════ EXPENSES ════════════════ -->
+  <div id="page-expenses" class="page">
+    <h1 class="page-title">Gastos</h1>
+
+    <div class="form-section">
+      <h3>Agregar gasto</h3>
+      <div class="field-row">
+        <div class="field" style="flex:2">
+          <label>Descripción</label>
+          <input type="text" id="exp-desc" placeholder="Ej. Supermercado, Netflix…" />
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="exp-date" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Monto ($MXN)</label>
+          <input type="number" id="exp-amount" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label>Frecuencia</label>
+          <select id="exp-freq">
+            <option value="monthly">Mensual</option>
+            <option value="biweekly">Quincenal</option>
+            <option value="weekly">Semanal</option>
+            <option value="once">Única vez</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Categoría</label>
+          <select id="exp-cat">
+            <option value="food">🛒 Comida</option>
+            <option value="transport">🚗 Transporte</option>
+            <option value="rent">🏠 Renta</option>
+            <option value="subscriptions">📱 Suscripciones</option>
+            <option value="health">💊 Salud</option>
+            <option value="other">📦 Otro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Método de pago</label>
+          <select id="exp-payment" onchange="toggleCardSelector()">
+            <option value="cash">💵 Efectivo / Banco</option>
+            <option value="cc">💳 Tarjeta de crédito</option>
+            <option value="wallet">🎫 Monedero / Vales</option>
+          </select>
+        </div>
+      </div>
+      <!-- Card selector — visible only when TC is selected -->
+      <div class="field" id="exp-card-field" style="display:none">
+        <label>Tarjeta</label>
+        <select id="exp-card-id">
+          <option value="">— Sin asignar —</option>
+        </select>
+      </div>
+      <!-- Wallet selector — visible only when Vales is selected -->
+      <div class="field" id="exp-wallet-field" style="display:none">
+        <label>Monedero</label>
+        <select id="exp-wallet-id">
+          <option value="">— Sin asignar —</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="addExpense()">Agregar gasto</button>
+    </div>
+
+    <!-- CC summary in expenses tab -->
+    <div class="cc-summary" id="exp-cc-wrap" style="display:none">
+      <div>
+        <div class="cc-summary-label">💳 Total en tarjeta de crédito</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">mensual normalizado</div>
+      </div>
+      <div class="cc-summary-val" id="exp-cc-total">$0</div>
+    </div>
+
+    <div class="list-section">
+      <h3>Mis gastos</h3>
+      <div id="expense-list"></div>
+    </div>
+
+    <div class="card" style="text-align:center;">
+      <div class="card-label">Total gasto mensual normalizado</div>
+      <div class="card-value" id="exp-total" style="color:var(--red)">$0</div>
+    </div>
+  </div>
+
+  <!-- ════════════════ COSAS A PAGAR ════════════════ -->
+  <div id="page-loans" class="page">
+    <h1 class="page-title">Cosas a Pagar</h1>
+
+    <!-- ── COMPROMISOS FIJOS ── -->
+    <div class="tab-section-title">📋 Compromisos fijos</div>
+
+    <div class="form-section">
+      <h3>Agregar compromiso de pago</h3>
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" id="loan-name" placeholder="Ej. Préstamo personal, renta…" />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Pago mensual ($MXN)</label>
+          <input type="number" id="loan-payment" placeholder="0.00" min="0" step="0.01" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label>Día de pago (1–31)</label>
+          <input type="number" id="loan-dueday" placeholder="Ej. 15" min="1" max="31" inputmode="numeric" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addLoan()">Agregar compromiso</button>
+    </div>
+
+    <div id="loan-list"></div>
+
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div>
+        <div class="card-label">Total mensual compromisos</div>
+        <div class="card-value" id="loan-total-monthly" style="color:var(--amber);font-size:24px">$0</div>
+      </div>
+      <div style="text-align:right">
+        <div class="card-label">Reserva semanal</div>
+        <div id="loan-total-weekly" style="font-size:20px;font-weight:700;color:var(--amber)">$0</div>
+      </div>
+    </div>
+
+    <!-- ── TARJETAS DE CRÉDITO ── -->
+    <div class="tab-section-title" style="margin-top:24px;">💳 Tarjetas de crédito</div>
+
+    <div class="form-section">
+      <h3>Agregar tarjeta de crédito</h3>
+      <div class="field-row">
+        <div class="field">
+          <label>Banco</label>
+          <input type="text" id="card-bank" placeholder="Ej. Banamex" />
+        </div>
+        <div class="field">
+          <label>Nombre / alias</label>
+          <input type="text" id="card-name" placeholder="Ej. TDC Oro" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Límite de crédito ($MXN)</label>
+          <input type="number" id="card-limit" placeholder="0.00" min="0" step="100" inputmode="decimal" />
+        </div>
+        <div class="field">
+          <label>Día límite de pago (1–31)</label>
+          <input type="number" id="card-payday" placeholder="Ej. 11" min="1" max="31" inputmode="numeric" />
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addCard()">Agregar tarjeta</button>
+    </div>
+
+    <div id="card-list"></div>
+
+    <!-- Total límite crédito -->
+    <div class="card" id="card-total-wrap" style="display:none;text-align:center;">
+      <div class="card-label">Crédito total disponible</div>
+      <div class="card-value" id="card-total-limit" style="color:var(--purple);font-size:24px">$0</div>
+    </div>
+  </div>
+
+  <!-- ════════════════ WEEKLY ════════════════ -->
+  <div id="page-weekly" class="page">
+    <h1 class="page-title">Semana</h1>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-label">% de ahorro recomendado</div>
+      <div class="slider-wrap" style="margin-top:10px;">
+        <input type="range" id="savings-slider" min="10" max="30" step="1" value="15"
+               oninput="updateSavingsPct(this.value)" />
+        <div class="slider-val" id="savings-pct-display">15%</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Ingreso real esta semana</h3>
+      <div class="field">
+        <label>¿Cuánto ganaste esta semana? ($MXN)</label>
+        <input type="number" id="weekly-income" placeholder="0.00" min="0"
+               inputmode="decimal" oninput="calcWeekly()" />
+      </div>
+    </div>
+
+    <div class="card checkin-result" id="weekly-result">
+      <div class="row">
+        <span class="row-label">📌 Reserva compromisos</span>
+        <span class="row-val" id="w-loans">$0</span>
+      </div>
+      <div class="row">
+        <span class="row-label">💰 Ahorro esta semana</span>
+        <span class="row-val" id="w-savings" style="color:var(--blue)">$0</span>
+      </div>
+      <div class="row">
+        <span class="row-label">🛍️ Libre para gastar</span>
+        <span class="row-val" id="w-free" style="color:var(--green)">$0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label" style="margin-bottom:12px;">Resumen mensual del presupuesto</div>
+      <div class="checkin-result">
+        <div class="row">
+          <span class="row-label">Ingresos mensuales</span>
+          <span class="row-val" id="bud-income" style="color:var(--green)">$0</span>
+        </div>
+        <div class="row">
+          <span class="row-label">− Gastos fijos</span>
+          <span class="row-val" id="bud-expenses" style="color:var(--red)">$0</span>
+        </div>
+        <div class="row">
+          <span class="row-label">− Reserva compromisos</span>
+          <span class="row-val" id="bud-loans" style="color:var(--amber)">$0</span>
+        </div>
+        <div class="row">
+          <span class="row-label">− Ahorro (<span id="bud-pct">15</span>%)</span>
+          <span class="row-val" id="bud-savings" style="color:var(--blue)">$0</span>
+        </div>
+        <div class="row" style="border-top:2px solid var(--border);padding-top:12px;">
+          <span class="row-label" style="font-weight:600;">= Disponible libre</span>
+          <span class="row-val" id="bud-available" style="color:var(--green);font-size:22px">$0</span>
+        </div>
+      </div>
+    </div>
+    <!-- ── RESPALDO ── -->
+    <div class="tab-section-title" style="margin-top:24px;">📦 Transferir datos</div>
+
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+        <button class="btn-primary" onclick="exportData()">📤 Exportar .json</button>
+        <button class="btn-primary" style="background:var(--bg3);color:var(--text);"
+                onclick="document.getElementById('import-file').click()">
+          📥 Importar .json
+        </button>
+      </div>
+      <input type="file" id="import-file" accept=".json"
+             style="display:none" onchange="importData(event)" />
+      <!-- Drive Sync Button in settings -->
+      <button onclick="document.getElementById('drive-setup-modal').style.display='flex'"
+        style="width:100%;margin-top:10px;padding:11px;background:rgba(58,130,247,.12);color:#3A82F7;
+               border:1.5px solid rgba(58,130,247,.3);border-radius:var(--radius-sm);
+               font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">
+        ☁ Configurar Google Drive Sync
+      </button>
+
+      <!-- Data summary -->
+      <div style="border-top:1px solid var(--border);padding-top:12px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;
+                    letter-spacing:0.4px;margin-bottom:8px;">Datos en este dispositivo</div>
+        <div id="data-summary-rows"></div>
+      </div>
+
+      <!-- Danger zone -->
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+        <button onclick="clearAllData()"
+                style="width:100%;background:rgba(255,69,58,0.1);color:var(--red);
+                       border:1.5px solid rgba(255,69,58,0.3);border-radius:var(--radius-sm);
+                       padding:11px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;">
+          🗑️ Borrar todos los datos
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ TAB BAR ════════════════ -->
+  <nav id="tabbar">
+    <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/>
+        <path d="M9 21V12h6v9"/>
+      </svg>
+      Panel
+    </button>
+    <button class="tab-btn" id="tab-income" onclick="switchTab('income')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 8v8M9 11l3-3 3 3"/>
+      </svg>
+      Ingresos
+    </button>
+    <button class="tab-btn" id="tab-expenses" onclick="switchTab('expenses')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M12 16V8M9 13l3 3 3-3"/>
+      </svg>
+      Gastos
+    </button>
+    <button class="tab-btn" id="tab-loans" onclick="switchTab('loans')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <path d="M2 10h20M6 15h4"/>
+      </svg>
+      Pagos
+    </button>
+    <button class="tab-btn" id="tab-weekly" onclick="switchTab('weekly')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/>
+      </svg>
+      Semana
+    </button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   DATA LAYER
+═══════════════════════════════════════════════════════════════════ */
+const DEFAULT_LOANS = [
+  { id: 'loan-1', name: 'Préstamo 1', monthlyPayment: 3000, dueDay: null },
+  { id: 'loan-2', name: 'Préstamo 2', monthlyPayment: 3000, dueDay: null },
+];
+const DEFAULT_SETTINGS = { savingsPercent: 15 };
+
+function load(key, fallback) {
+  try { const r = localStorage.getItem(key); return r !== null ? JSON.parse(r) : fallback; }
+  catch { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+function initStorage() {
+  if (!localStorage.getItem('pf_loans'))    save('pf_loans',    DEFAULT_LOANS);
+  if (!localStorage.getItem('pf_settings')) save('pf_settings', DEFAULT_SETTINGS);
+  if (!localStorage.getItem('pf_cards'))    save('pf_cards',    []);
+
+  // Migration: stamp openCycle on cards that don't have one yet
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const cards = load('pf_cards', []);
+  let cardsDirty = false;
+  cards.forEach(c => { if (!c.openCycle) { c.openCycle = thisMonth; cardsDirty = true; } });
+  if (cardsDirty) save('pf_cards', cards);
+
+  // Migration: stamp cycle on card expenses that don't have one
+  const expenses = load('pf_expenses', []);
+  let expDirty = false;
+  expenses.forEach(e => {
+    if (e.payment === 'cc' && e.cardId && !e.cycle) {
+      const card = cards.find(c => c.id === e.cardId);
+      e.cycle = card?.openCycle || thisMonth;
+      expDirty = true;
+    }
+  });
+  if (expDirty) save('pf_expenses', expenses);
+}
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+/** Returns Monday of the week containing `date` as 'YYYY-MM-DD' */
+function getWeekStart(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return d.toISOString().slice(0, 10);
+}
+
+/** Human-readable week label: "Lun 14 – Dom 20 Abr" */
+function weekLabel(weekStart) {
+  const mon = new Date(weekStart + 'T12:00:00');
+  const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+  const MES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `Lun ${mon.getDate()} – Dom ${sun.getDate()} ${MES[sun.getMonth()]}`;
+}
+
+let _viewMode = localStorage.getItem('pf_view_mode') || 'weekly';
+
+function setViewMode(mode) {
+  _viewMode = mode;
+  localStorage.setItem('pf_view_mode', mode);
+  // Toggle button styles
+  const wBtn = document.getElementById('view-btn-weekly');
+  const mBtn = document.getElementById('view-btn-monthly');
+  const wpCard = document.getElementById('d-weekly-pay-card');
+  if (wBtn) { wBtn.style.background = mode === 'weekly' ? 'var(--blue)' : 'transparent'; wBtn.style.color = mode === 'weekly' ? '#fff' : 'var(--text2)'; }
+  if (mBtn) { mBtn.style.background = mode === 'monthly' ? 'var(--blue)' : 'transparent'; mBtn.style.color = mode === 'monthly' ? '#fff' : 'var(--text2)'; }
+  if (wpCard) wpCard.style.display = mode === 'weekly' ? 'block' : 'none';
+  renderDashboard();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FREQUENCY & LABELS
+═══════════════════════════════════════════════════════════════════ */
+const FREQ_MULT  = { weekly: 4.33, biweekly: 2, monthly: 1, once: 0 };
+const FREQ_LABEL = { weekly: 'Semanal', biweekly: 'Quincenal', monthly: 'Mensual', once: 'Única vez' };
+const CAT_LABEL  = {
+  food: '🛒 Comida', transport: '🚗 Transporte', rent: '🏠 Renta',
+  subscriptions: '📱 Suscripciones', health: '💊 Salud', other: '📦 Otro'
+};
+
+function toMonthly(amount, freq) { return amount * (FREQ_MULT[freq] ?? 1); }
+
+/**
+ * Amount to display for a card expense:
+ * - "once" → show the real charge (not $0)
+ * - other frequencies → normalize to monthly as usual
+ */
+function toCardDisplay(amount, freq) {
+  return freq === 'once' ? amount : toMonthly(amount, freq);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DATE HELPERS — for due dates and card cut/pay dates
+═══════════════════════════════════════════════════════════════════ */
+
+/** Returns the next Date on which dayOfMonth occurs (today counts if same day) */
+function nextOccurrence(dayOfMonth) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  // Clamp to valid days in current month
+  const lastDayThisMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const clampedDay = Math.min(dayOfMonth, lastDayThisMonth);
+  const thisMonth  = new Date(today.getFullYear(), today.getMonth(), clampedDay);
+  if (thisMonth >= today) return thisMonth;
+  // Move to next month
+  const lastDayNext = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate();
+  return new Date(today.getFullYear(), today.getMonth() + 1, Math.min(dayOfMonth, lastDayNext));
+}
+
+/** Days from today until given Date (0 = today, negative = past) */
+function daysUntil(date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return Math.round((d - today) / 86400000);
+}
+
+/** CSS class for urgency based on days remaining */
+function urgencyClass(days) {
+  if (days <= 3) return 'urgent';
+  if (days <= 7) return 'warning';
+  return 'ok';
+}
+
+/** Friendly short date: "5 may", "21 jun" */
+function fmtDate(date) {
+  return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+}
+
+/** "en X días" label */
+function daysLabel(days) {
+  if (days === 0) return '¡hoy!';
+  if (days === 1) return 'mañana';
+  if (days < 0)  return `hace ${Math.abs(days)} día${Math.abs(days) > 1 ? 's' : ''}`;
+  return `en ${days} día${days > 1 ? 's' : ''}`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FORMATTING
+═══════════════════════════════════════════════════════════════════ */
+function fmt(n) { return '$' + Math.round(n).toLocaleString('es-MX'); }
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CORE CALCULATIONS
+═══════════════════════════════════════════════════════════════════ */
+function calcTotals(mode = 'monthly') {
+  const incomes    = load('pf_incomes',     []);
+  const expenses   = load('pf_expenses',    []);
+  const loans      = load('pf_loans',       DEFAULT_LOANS);
+  const cards      = load('pf_cards',       []);
+  const weeklyPays = load('pf_weekly_pays', []);
+  const settings   = load('pf_settings',   DEFAULT_SETTINGS);
+  const thisMonth  = new Date().toISOString().slice(0, 7);
+  const thisWeek   = getWeekStart();
+
+  // Fixed monthly income (not nómina — those come from weekly pays)
+  const fixedMonthlyIncome = incomes.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
+
+  // This week's logged nómina (sum all pays registered for this week)
+  const weekPay = weeklyPays
+    .filter(p => p.weekStart === thisWeek)
+    .reduce((s, p) => s + p.amount, 0);
+
+  // Monthly expenses (wallet-tagged excluded — tracked separately)
+  const monthlyExpenses = expenses
+    .filter(e => e.payment !== 'wallet')
+    .reduce((s, e) => s + toMonthly(e.amount, e.frequency), 0);
+
+  const totalCC = expenses
+    .filter(e => e.payment === 'cc')
+    .reduce((s, e) => s + toMonthly(e.amount, e.frequency), 0);
+
+  const totalLoansMonthly = loans.reduce((s, l) => s + l.monthlyPayment, 0);
+
+  const cardPaymentsMonth = cards.reduce((s, c) =>
+    s + (c.payments || [])
+      .filter(p => p.date.startsWith(thisMonth))
+      .reduce((a, p) => a + p.amount, 0), 0);
+
+  const cardPaymentsWeek = cards.reduce((s, c) =>
+    s + (c.payments || [])
+      .filter(p => p.date >= thisWeek && p.date <= thisWeek.slice(0,8) + String(+thisWeek.slice(8)+6).padStart(2,'0'))
+      .reduce((a, p) => a + p.amount, 0), 0);
+
+  if (mode === 'weekly') {
+    // Income: this week's nómina + fixed monthly income prorated to week
+    const totalIncome   = weekPay + fixedMonthlyIncome / 4.33;
+    const totalExpenses = monthlyExpenses / 4.33;
+    const totalLoans    = totalLoansMonthly / 4.33;
+    const savingsAmt    = totalIncome * (settings.savingsPercent / 100);
+    const available     = totalIncome - totalExpenses - totalLoans - savingsAmt - cardPaymentsWeek;
+    const dailyLimit    = available / 7;
+    return { totalIncome, totalExpenses, totalCC: totalCC / 4.33, totalLoans,
+             cardPayments: cardPaymentsWeek, savingsAmt, available, weeklyLimit: dailyLimit,
+             fixedMonthlyIncome, weekPay, settings, mode };
+  } else {
+    // Monthly: average recent weeks' nómina * 4.33 + fixed income
+    const recentWeeks = [...new Set(weeklyPays.map(p => p.weekStart))].sort().slice(-8);
+    const avgWeekPay  = recentWeeks.length > 0
+      ? weeklyPays.filter(p => recentWeeks.includes(p.weekStart))
+          .reduce((s, p) => s + p.amount, 0) / recentWeeks.length
+      : 0;
+    const totalIncome   = avgWeekPay * 4.33 + fixedMonthlyIncome;
+    const totalExpenses = monthlyExpenses;
+    const totalLoans    = totalLoansMonthly;
+    const savingsAmt    = totalIncome * (settings.savingsPercent / 100);
+    const available     = totalIncome - totalExpenses - totalLoans - savingsAmt - cardPaymentsMonth;
+    const weeklyLimit   = available / 4.33;
+    return { totalIncome, totalExpenses, totalCC, totalLoans,
+             cardPayments: cardPaymentsMonth, savingsAmt, available, weeklyLimit,
+             fixedMonthlyIncome, weekPay, settings, mode };
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TAB NAVIGATION
+═══════════════════════════════════════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('tab-'  + name).classList.add('active');
+  document.getElementById('page-' + name).scrollTop = 0;
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DONUT CHART (pure SVG)
+═══════════════════════════════════════════════════════════════════ */
+const DONUT_R = 54, DONUT_CX = 70, DONUT_CY = 70, DONUT_SW = 22;
+
+function polarToXY(cx, cy, r, deg) {
+  const rad = (deg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function arcPath(cx, cy, r, s, e) {
+  const a = polarToXY(cx, cy, r, s), b = polarToXY(cx, cy, r, e);
+  return `M ${a.x} ${a.y} A ${r} ${r} 0 ${(e - s) > 180 ? 1 : 0} 1 ${b.x} ${b.y}`;
+}
+
+function renderDonut() {
+  const { totalIncome, totalExpenses, totalLoans, savingsAmt } = calcTotals(_viewMode);
+  const slicesEl  = document.getElementById('donut-slices');
+  const legendEl  = document.getElementById('donut-legend');
+  const centerVal = document.getElementById('donut-center-val');
+
+  centerVal.textContent = fmt(totalIncome);
+
+  const segments = [
+    { label: 'Gastos',    value: totalExpenses, color: '#FF453A' },
+    { label: 'Pagos fijos', value: totalLoans,   color: '#FF9F0A' },
+    { label: 'Ahorro',    value: savingsAmt,    color: '#3A82F7' },
+  ];
+  const free = Math.max(0, totalIncome - totalExpenses - totalLoans - savingsAmt);
+  if (free > 0) segments.push({ label: 'Libre', value: free, color: '#32D74B' });
+
+  const total = segments.reduce((s, x) => s + x.value, 0);
+  slicesEl.innerHTML = '';
+  legendEl.innerHTML = '';
+
+  if (total === 0) {
+    slicesEl.innerHTML = `<circle cx="${DONUT_CX}" cy="${DONUT_CY}" r="${DONUT_R}"
+      fill="none" stroke="var(--bg3)" stroke-width="${DONUT_SW}" />`;
+    legendEl.innerHTML = '<div class="empty-state">Sin datos aún</div>';
+    return;
+  }
+
+  let startAngle = 0;
+  segments.forEach(seg => {
+    if (seg.value < 0.001) return;
+    const pct = seg.value / total;
+    const sweep = pct * 360;
+    const endAngle = startAngle + sweep;
+    const gap = 2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', arcPath(DONUT_CX, DONUT_CY, DONUT_R, startAngle + gap/2, endAngle - gap/2));
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', seg.color);
+    path.setAttribute('stroke-width', DONUT_SW);
+    path.setAttribute('stroke-linecap', 'round');
+    slicesEl.appendChild(path);
+    legendEl.innerHTML += `<div class="legend-item">
+      <span class="legend-dot" style="background:${seg.color}"></span>
+      <span class="legend-label">${seg.label}</span>
+      <span class="legend-pct">${Math.round(pct * 100)}%</span></div>`;
+    startAngle = endAngle;
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const isWeekly = _viewMode === 'weekly';
+  const { totalIncome, totalExpenses, totalCC, totalLoans,
+          savingsAmt, available, weeklyLimit, weekPay, settings } = calcTotals(_viewMode);
+
+  const period = isWeekly ? 'esta semana' : 'este mes';
+
+  document.getElementById('d-available-label').textContent = isWeekly ? 'Disponible esta semana' : 'Disponible este mes';
+  document.getElementById('d-income').textContent    = fmt(totalIncome);
+  document.getElementById('d-expenses').textContent  = fmt(totalExpenses);
+  document.getElementById('d-loans').textContent     = fmt(totalLoans);
+  document.getElementById('d-savings').textContent   = fmt(savingsAmt);
+  document.getElementById('d-income-sub').textContent   = period;
+  document.getElementById('d-expenses-sub').textContent = period;
+  document.getElementById('d-loans-sub').textContent    = period;
+  document.getElementById('d-savings-pct').textContent  = `${settings.savingsPercent}% del ingreso`;
+  document.getElementById('d-available').textContent    = fmt(Math.max(0, available));
+  document.getElementById('d-available-sub').textContent = available >= 0
+    ? (isWeekly ? `${fmt(weeklyLimit)}/día disponible` : `${fmt(weeklyLimit)}/semana disponible`)
+    : `Déficit de ${fmt(Math.abs(available))}`;
+  document.getElementById('d-limit-label').textContent = isWeekly ? 'Disponible / día' : 'Límite semanal';
+  document.getElementById('d-weekly').textContent = fmt(Math.max(0, weeklyLimit));
+  document.getElementById('d-savings-label').textContent = isWeekly ? 'Meta de ahorro semanal' : 'Meta de ahorro mensual';
+
+  // Weekly pay card — show current week's registered pay
+  const wpCurrent = document.getElementById('d-weekly-pay-current');
+  if (wpCurrent) {
+    const thisWeek = getWeekStart();
+    const weeklyPays = load('pf_weekly_pays', []);
+    const thisPays = weeklyPays.filter(p => p.weekStart === thisWeek);
+    if (thisPays.length > 0) {
+      const total = thisPays.reduce((s, p) => s + p.amount, 0);
+      wpCurrent.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;
+        background:rgba(50,215,75,0.1);border-radius:8px;padding:8px 10px;">
+        <span style="font-size:12px;color:var(--text2);">✅ ${weekLabel(thisWeek)}</span>
+        <strong style="color:var(--green);font-size:16px;">${fmt(total)}</strong>
+      </div>`;
+    } else {
+      wpCurrent.innerHTML = `<div style="font-size:12px;color:var(--text3);font-style:italic;">
+        Aún no registras la nómina de ${weekLabel(thisWeek)}</div>`;
+    }
+  }
+
+  // Toggle button state
+  const wpCard = document.getElementById('d-weekly-pay-card');
+  if (wpCard) wpCard.style.display = isWeekly ? 'block' : 'none';
+  const wBtn = document.getElementById('view-btn-weekly');
+  const mBtn = document.getElementById('view-btn-monthly');
+  if (wBtn) { wBtn.style.background = isWeekly  ? 'var(--blue)' : 'transparent'; wBtn.style.color = isWeekly  ? '#fff' : 'var(--text2)'; }
+  if (mBtn) { mBtn.style.background = !isWeekly ? 'var(--blue)' : 'transparent'; mBtn.style.color = !isWeekly ? '#fff' : 'var(--text2)'; }
+
+  // CC highlight
+  const ccWrap = document.getElementById('d-cc-wrap');
+  if (totalCC > 0) {
+    ccWrap.style.display = 'flex';
+    document.getElementById('d-cc-total').textContent = fmt(totalCC);
+    document.getElementById('d-cc-sub').textContent   = isWeekly ? 'proporción semanal' : 'mensual normalizado';
+  } else {
+    ccWrap.style.display = 'none';
+  }
+
+  // Status pill
+  const pill = document.getElementById('d-status-pill');
+  const txt  = document.getElementById('d-status-txt');
+  pill.className = 'status-pill';
+  if (available > totalIncome * 0.15)  { pill.classList.add('green'); txt.textContent = 'Saludable'; }
+  else if (available >= 0)             { pill.classList.add('amber'); txt.textContent = 'Ajustado'; }
+  else                                 { pill.classList.add('red');   txt.textContent = 'Déficit'; }
+
+  // Savings progress
+  document.getElementById('d-savings-have').textContent = fmt(Math.max(0, available)) + ' disponible';
+  document.getElementById('d-savings-goal').textContent = 'meta: ' + fmt(savingsAmt);
+  const pct = savingsAmt > 0 ? Math.min(100, (Math.max(0, available) / savingsAmt) * 100) : 0;
+  const bar = document.getElementById('d-savings-bar');
+  bar.style.width = pct + '%';
+  bar.style.background = pct >= 100 ? 'var(--green)' : pct > 50 ? 'var(--amber)' : 'var(--red)';
+
+  renderDonut();
+  renderDebtSummary();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WEEKLY PAY LOG
+═══════════════════════════════════════════════════════════════════ */
+function addWeeklyPay() {
+  const amount = parseFloat(document.getElementById('d-wpay-amount')?.value);
+  const note   = (document.getElementById('d-wpay-note')?.value || '').trim();
+  if (!amount || amount <= 0) return showToast('Ingresa el monto de tu nómina');
+
+  const pays = load('pf_weekly_pays', []);
+  const thisWeek = getWeekStart();
+  pays.push({ id: uid(), weekStart: thisWeek, amount, note, createdAt: new Date().toISOString() });
+  save('pf_weekly_pays', pays);
+
+  document.getElementById('d-wpay-amount').value = '';
+  document.getElementById('d-wpay-note').value   = '';
+  showToast('Nómina registrada ✓');
+  renderAll();
+}
+
+function deleteWeeklyPay(id) {
+  save('pf_weekly_pays', load('pf_weekly_pays', []).filter(p => p.id !== id));
+  renderAll();
+}
+
+function renderWeeklyPayHistory() {
+  const el = document.getElementById('weekly-pay-history');
+  if (!el) return;
+  const pays = load('pf_weekly_pays', []);
+  if (pays.length === 0) {
+    el.innerHTML = '<div class="empty-state">Sin nóminas registradas</div>';
+    return;
+  }
+  // Group by week, show last 8 weeks
+  const byWeek = {};
+  pays.forEach(p => { if (!byWeek[p.weekStart]) byWeek[p.weekStart] = []; byWeek[p.weekStart].push(p); });
+  const weeks = Object.keys(byWeek).sort().reverse().slice(0, 8);
+  const thisWeek = getWeekStart();
+
+  el.innerHTML = weeks.map(w => {
+    const total = byWeek[w].reduce((s, p) => s + p.amount, 0);
+    const isThis = w === thisWeek;
+    return `<div class="list-item" style="flex-direction:column;align-items:stretch;gap:4px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div class="list-item-name" style="${isThis ? 'color:var(--blue)' : ''}">${isThis ? '📍 ' : ''}${weekLabel(w)}</div>
+          ${byWeek[w].map(p => p.note ? `<div class="list-item-meta">${escHtml(p.note)}</div>` : '').join('')}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <strong style="color:var(--green);font-size:16px;">${fmt(total)}</strong>
+          ${byWeek[w].map(p => `
+            <button class="btn-icon btn-delete" onclick="deleteWeeklyPay('${p.id}')">${iconX()}</button>
+          `).join('')}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DEBT SUMMARY
+═══════════════════════════════════════════════════════════════════ */
+function renderDebtSummary() {
+  const wrap = document.getElementById('d-debts-wrap');
+  const list = document.getElementById('d-debts-list');
+  if (!wrap || !list) return;
+
+  const cards    = load('pf_cards', []);
+  const expenses = load('pf_expenses', []);
+  const loans    = load('pf_loans',    []);
+  const thisMonth = new Date().toISOString().slice(0, 7);
+
+  // Build debt items from cards
+  const cardDebts = cards.map(c => {
+    const cardExps = expenses.filter(e => e.cardId === c.id);
+    const charged  = cardExps.reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    const paid     = (c.payments || [])
+      .filter(p => p.date.startsWith(thisMonth))
+      .reduce((s, p) => s + p.amount, 0);
+    const pending  = Math.max(0, charged - paid);
+    if (pending <= 0) return null;
+    const payDate  = nextOccurrence(c.payDay);
+    const days     = daysUntil(payDate);
+    return {
+      type: 'card', id: c.id,
+      label: `💳 ${c.bank} · ${c.cardName}`,
+      amount: pending, days, payDate,
+      cls: urgencyClass(days),
+    };
+  }).filter(Boolean);
+
+  // Build debt items from loans
+  const loanDebts = loans.map(l => {
+    if (!l.monthlyPayment || l.monthlyPayment <= 0) return null;
+    const payDate = l.dueDay ? nextOccurrence(l.dueDay) : null;
+    const days    = payDate ? daysUntil(payDate) : 999;
+    return {
+      type: 'loan', id: l.id,
+      label: `📋 ${l.name}`,
+      amount: l.monthlyPayment, days, payDate,
+      cls: payDate ? urgencyClass(days) : 'ok',
+    };
+  }).filter(Boolean);
+
+  const all = [...cardDebts, ...loanDebts];
+  if (all.length === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  // Sort: soonest due first, then by amount desc
+  all.sort((a, b) => a.days - b.days || b.amount - a.amount);
+
+  const RANK = ['Pagar primero 🔴', 'Segundo ⚠️', 'Tercero', 'Cuarto', 'Quinto'];
+  const rankColor = ['var(--red)', 'var(--amber)', 'var(--text2)', 'var(--text2)', 'var(--text2)'];
+
+  list.innerHTML = all.map((d, i) => `
+    <div style="background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px;
+                margin-bottom:8px;box-shadow:var(--shadow);
+                border-left:4px solid ${d.cls === 'urgent' ? 'var(--red)' : d.cls === 'warning' ? 'var(--amber)' : 'var(--green)'};">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;
+                     color:${rankColor[i] || 'var(--text3)'};">${RANK[i] || `#${i+1}`}</span>
+        <span class="date-pill ${d.cls}">${d.days < 999 ? daysLabel(d.days) : 'Sin fecha'}</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${d.label}</div>
+          ${d.payDate ? `<div style="font-size:11px;color:var(--text3);margin-top:1px;">Vence el ${fmtDate(d.payDate)}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <div style="font-size:20px;font-weight:700;
+                      color:${d.cls === 'urgent' ? 'var(--red)' : d.cls === 'warning' ? 'var(--amber)' : 'var(--text)'}">
+            ${fmt(d.amount)}
+          </div>
+          ${d.type === 'card' ? `
+          <button onclick="toggleDebtPayForm('${d.id}')"
+                  style="background:var(--blue);color:#fff;border:none;border-radius:8px;
+                         padding:6px 12px;font-size:12px;font-weight:600;font-family:inherit;
+                         cursor:pointer;white-space:nowrap;">
+            💳 Pagar
+          </button>` : ''}
+        </div>
+      </div>
+      ${d.type === 'card' ? `
+      <div id="dpay-form-${d.id}" style="display:none;margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <input type="number" id="dpay-amount-${d.id}" placeholder="Monto ($)"
+                 min="0" step="0.01" inputmode="decimal"
+                 style="flex:1;background:var(--bg3);border:1.5px solid transparent;
+                        border-radius:var(--radius-sm);padding:9px 12px;font-size:14px;
+                        font-family:inherit;color:var(--text);outline:none;"
+                 onfocus="this.style.borderColor='var(--blue)'"
+                 onblur="this.style.borderColor='transparent'" />
+          <button onclick="addCardPaymentFromDashboard('${d.id}')"
+                  style="background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);
+                         padding:9px 14px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;">
+            ✓ Confirmar
+          </button>
+        </div>
+        <input type="text" id="dpay-note-${d.id}" placeholder="Nota opcional (ej. SPEI, efectivo…)"
+               style="width:100%;background:var(--bg3);border:1.5px solid transparent;
+                      border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;
+                      font-family:inherit;color:var(--text);outline:none;"
+               onfocus="this.style.borderColor='var(--blue)'"
+               onblur="this.style.borderColor='transparent'" />
+      </div>` : ''}
+    </div>`).join('') +
+    `<div style="background:rgba(58,130,247,0.08);border-radius:var(--radius-sm);
+                 padding:10px 14px;font-size:12px;color:var(--text2);line-height:1.6;margin-top:4px;">
+      💡 <strong style="color:var(--text)">Recomendación:</strong>
+      Empieza por <strong style="color:var(--text)">${all[0].label.replace(/^\S+ /, '')}</strong>
+      — es la más próxima a vencer.
+      ${all.length > 1 ? `Después cubre <strong style="color:var(--text)">${all[1].label.replace(/^\S+ /, '')}</strong>.` : ''}
+      ${all.some(d => d.cls === 'urgent') ? ' <span style="color:var(--red);font-weight:600;">¡Hay pagos urgentes!</span>' : ''}
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INCOME
+═══════════════════════════════════════════════════════════════════ */
+function renderIncome() {
+  const incomes = load('pf_incomes', []);
+  const el = document.getElementById('income-list');
+  const total = incomes.reduce((s, i) => s + toMonthly(i.amount, i.frequency), 0);
+
+  el.innerHTML = incomes.length === 0
+    ? '<div class="empty-state">Sin ingresos registrados</div>'
+    : incomes.map(i => `
+      <div class="list-item">
+        <div class="list-item-info">
+          <div class="list-item-name">${escHtml(i.description)}</div>
+          <div class="list-item-meta">${FREQ_LABEL[i.frequency]} · ${fmt(i.amount)}
+            ${i.frequency !== 'monthly' ? `· ${fmt(toMonthly(i.amount, i.frequency))}/mes` : ''}</div>
+        </div>
+        <div class="list-item-amount" style="color:var(--green)">${fmt(toMonthly(i.amount, i.frequency))}</div>
+        <button class="btn-icon btn-delete" onclick="deleteIncome('${i.id}')" aria-label="Eliminar">
+          ${iconX()}
+        </button>
+      </div>`).join('');
+
+  document.getElementById('inc-total').textContent = fmt(total);
+}
+
+function addIncome() {
+  const desc   = document.getElementById('inc-desc').value.trim();
+  const amount = parseFloat(document.getElementById('inc-amount').value);
+  const freq   = document.getElementById('inc-freq').value;
+  if (!desc)           return showToast('Escribe una descripción');
+  if (!amount || amount <= 0) return showToast('Monto inválido');
+  const incomes = load('pf_incomes', []);
+  incomes.push({ id: uid(), description: desc, amount, frequency: freq });
+  save('pf_incomes', incomes);
+  document.getElementById('inc-desc').value = '';
+  document.getElementById('inc-amount').value = '';
+  showToast('Ingreso agregado ✓');
+  renderAll();
+}
+
+function deleteIncome(id) {
+  save('pf_incomes', load('pf_incomes', []).filter(i => i.id !== id));
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EXPENSES  (now includes payment method field)
+═══════════════════════════════════════════════════════════════════ */
+function renderExpenses() {
+  const expenses = load('pf_expenses', []);
+  const cards    = load('pf_cards',    []);
+  const wallets  = load('pf_wallets',  []);
+  const el       = document.getElementById('expense-list');
+
+  // Totals (excluding wallet expenses from main budget)
+  const total   = expenses.filter(e => e.payment !== 'wallet')
+                          .reduce((s, e) => s + toMonthly(e.amount, e.frequency), 0);
+  const totalCC = expenses.filter(e => e.payment === 'cc')
+                          .reduce((s, e) => s + toMonthly(e.amount, e.frequency), 0);
+
+  const ccWrap = document.getElementById('exp-cc-wrap');
+  if (totalCC > 0) { ccWrap.style.display = 'flex'; document.getElementById('exp-cc-total').textContent = fmt(totalCC); }
+  else               ccWrap.style.display = 'none';
+
+  if (expenses.length === 0) {
+    el.innerHTML = '<div class="empty-state">Sin gastos registrados</div>';
+    document.getElementById('exp-total').textContent = fmt(0);
+    return;
+  }
+
+  // Sort by date descending (newest first); expenses without date go to bottom
+  const sorted = [...expenses].sort((a, b) => {
+    const da = a.createdAt || '0000';
+    const db = b.createdAt || '0000';
+    return db.localeCompare(da);
+  });
+
+  // Helper: render a single expense row
+  const expRow = (e) => {
+    let dateStr = '';
+    if (e.createdAt) {
+      const d = new Date(e.createdAt);
+      const dd   = String(d.getDate()).padStart(2, '0');
+      const mm   = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      dateStr = `${dd}/${mm}/${yyyy}`;
+    }
+    const dateVal = e.createdAt ? e.createdAt.slice(0, 10) : '';
+    return `
+    <div class="list-item">
+      <div class="list-item-info" style="flex:1;min-width:0;">
+        <div class="list-item-name">${escHtml(e.description)}</div>
+        <div class="list-item-meta" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center;">
+          <span class="badge badge-cat">${CAT_LABEL[e.category] ?? e.category}</span>
+          <span style="color:var(--text3)">${FREQ_LABEL[e.frequency]}</span>
+          ${e.frequency !== 'monthly' && e.frequency !== 'once'
+            ? `<span style="color:var(--text3)">· ${fmt(toMonthly(e.amount, e.frequency))}/mes</span>`
+            : ''}
+        </div>
+        <input type="date" value="${dateVal}"
+               onchange="setExpenseDate('${e.id}', this.value)"
+               style="margin-top:4px;font-size:12px;color:${dateStr ? 'var(--blue)' : 'var(--text3)'};
+                      background:none;border:none;border-bottom:1px dashed var(--border);
+                      font-family:inherit;cursor:pointer;padding:2px 0;outline:none;" />
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <div class="list-item-amount" style="color:var(--red)">${fmt(toCardDisplay(e.amount, e.frequency))}</div>
+        <button class="btn-icon btn-delete" onclick="deleteExpense('${e.id}')" aria-label="Eliminar">${iconX()}</button>
+      </div>
+    </div>`;
+  };
+
+  // Helper: section header
+  const sectionHeader = (icon, title, subtotal) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                padding:8px 4px 4px;border-bottom:2px solid var(--border);margin-bottom:4px;margin-top:16px;">
+      <span style="font-size:13px;font-weight:700;color:var(--text)">${icon} ${escHtml(title)}</span>
+      <span style="font-size:12px;font-weight:600;color:var(--text2)">${fmt(subtotal)}</span>
+    </div>`;
+
+  let html = '';
+
+  // ── Sección por tarjeta ──
+  cards.forEach(c => {
+    const cExps = sorted.filter(e => e.payment === 'cc' && e.cardId === c.id);
+    if (cExps.length === 0) return;
+    const sub = cExps.reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    html += sectionHeader('💳', `${c.bank} · ${c.cardName}`, sub);
+    html += cExps.map(expRow).join('');
+  });
+
+  // TC sin tarjeta asignada o cuya tarjeta ya no existe
+  const knownCardIds = new Set(cards.map(c => c.id));
+  const unassignedCC = sorted.filter(e => e.payment === 'cc' && (!e.cardId || !knownCardIds.has(e.cardId)));
+  if (unassignedCC.length > 0) {
+    const sub = unassignedCC.reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    html += sectionHeader('💳', 'Tarjeta de crédito (sin asignar)', sub);
+    html += unassignedCC.map(expRow).join('');
+  }
+
+  // ── Sección por monedero ──
+  wallets.forEach(w => {
+    const wExps = sorted.filter(e => e.payment === 'wallet' && e.walletId === w.id);
+    if (wExps.length === 0) return;
+    const sub = wExps.reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    html += sectionHeader('🎫', w.name, sub);
+    html += wExps.map(expRow).join('');
+  });
+
+  // Monedero sin asignar
+  const unassignedW = sorted.filter(e => e.payment === 'wallet' && !e.walletId);
+  if (unassignedW.length > 0) {
+    const sub = unassignedW.reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    html += sectionHeader('🎫', 'Monedero (sin asignar)', sub);
+    html += unassignedW.map(expRow).join('');
+  }
+
+  // ── Efectivo / Banco ──
+  const cashExps = sorted.filter(e => e.payment === 'cash' || (!e.payment));
+  if (cashExps.length > 0) {
+    const sub = cashExps.reduce((s, e) => s + toMonthly(e.amount, e.frequency), 0);
+    html += sectionHeader('💵', 'Efectivo / Banco', sub);
+    html += cashExps.map(expRow).join('');
+  }
+
+  el.innerHTML = html || '<div class="empty-state">Sin gastos registrados</div>';
+  document.getElementById('exp-total').textContent = fmt(total);
+}
+
+function addExpense() {
+  const desc    = document.getElementById('exp-desc').value.trim();
+  const amount  = parseFloat(document.getElementById('exp-amount').value);
+  const cat     = document.getElementById('exp-cat').value;
+  const freq    = document.getElementById('exp-freq').value;
+  const payment = document.getElementById('exp-payment').value;
+  const cardId  = payment === 'cc'     ? (document.getElementById('exp-card-id').value   || null) : null;
+  const walletId= payment === 'wallet' ? (document.getElementById('exp-wallet-id').value || null) : null;
+  if (!desc)                  return showToast('Escribe una descripción');
+  if (!amount || amount <= 0) return showToast('Monto inválido');
+  // Stamp the card's open cycle so the expense belongs to the right billing period
+  let cycle = null;
+  if (payment === 'cc' && cardId) {
+    const cards = load('pf_cards', []);
+    const card  = cards.find(c => c.id === cardId);
+    cycle = card?.openCycle || new Date().toISOString().slice(0, 7);
+  }
+  const dateInput = document.getElementById('exp-date').value;
+  const createdAt = dateInput ? new Date(dateInput + 'T12:00:00').toISOString() : new Date().toISOString();
+  const expenses = load('pf_expenses', []);
+  expenses.push({ id: uid(), description: desc, amount, category: cat, frequency: freq, payment, cardId, walletId, cycle, createdAt });
+  save('pf_expenses', expenses);
+  document.getElementById('exp-desc').value   = '';
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('exp-date').value   = '';
+  showToast('Gasto agregado ✓');
+  renderAll();
+}
+
+function deleteExpense(id) {
+  save('pf_expenses', load('pf_expenses', []).filter(e => e.id !== id));
+  renderAll();
+}
+
+function setExpenseDate(id, dateValue) {
+  if (!dateValue) return;
+  const expenses = load('pf_expenses', []);
+  const exp = expenses.find(e => e.id === id);
+  if (!exp) return;
+  exp.createdAt = new Date(dateValue + 'T12:00:00').toISOString();
+  save('pf_expenses', expenses);
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPROMISOS (LOANS) — editable amount + due date + payment history
+   Data model: { id, name, monthlyPayment, dueDay, paymentHistory[] }
+   paymentHistory item: { month: 'YYYY-MM', amount, note }
+═══════════════════════════════════════════════════════════════════ */
+function renderLoans() {
+  const loans = load('pf_loans', DEFAULT_LOANS);
+  const el    = document.getElementById('loan-list');
+  const totalMonthly = loans.reduce((s, l) => s + l.monthlyPayment, 0);
+  const totalWeekly  = totalMonthly / 4.33;
+
+  if (loans.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="margin-bottom:12px">Sin compromisos registrados</div>';
+  } else {
+    el.innerHTML = loans.map(l => {
+      const history = l.paymentHistory || [];
+
+      // Due date block
+      let dueDateHtml = '';
+      if (l.dueDay) {
+        const nextDate = nextOccurrence(l.dueDay);
+        const days     = daysUntil(nextDate);
+        const cls      = urgencyClass(days);
+        dueDateHtml = `
+          <div class="pay-card-dates">
+            <div class="date-block">
+              <div class="date-block-label">📅 Fecha de pago</div>
+              <div class="date-block-date">Día ${l.dueDay} de cada mes</div>
+            </div>
+            <div class="date-block">
+              <div class="date-block-label">⏰ Próximo vencimiento</div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <div class="date-block-date">${fmtDate(nextDate)}</div>
+                <span class="date-pill ${cls}">${daysLabel(days)}</span>
+              </div>
+            </div>
+          </div>`;
+      }
+
+      // Payment history rows (most recent first, show up to 6)
+      const historyRows = history.slice().reverse().slice(0, 6).map(p => `
+        <div class="history-row">
+          <div>
+            <div class="history-month">${fmtMonth(p.month)}</div>
+            ${p.note ? `<div class="history-note">${escHtml(p.note)}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="history-amount">${fmt(p.amount)}</div>
+            <button class="btn-icon btn-delete" style="padding:2px"
+                    onclick="deleteLoanPayment('${l.id}','${p.month}')" aria-label="Eliminar">
+              ${iconX()}
+            </button>
+          </div>
+        </div>`).join('');
+
+      // Current month key
+      const now = new Date();
+      const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      const alreadyThisMonth = history.some(p => p.month === thisMonth);
+
+      return `
+      <div class="pay-card" id="lcard-${l.id}">
+        <div class="pay-card-top">
+          <div style="flex:1;min-width:0;">
+            <div class="pay-card-title">${escHtml(l.name)}</div>
+            <div class="pay-card-sub">Reserva semanal: ${fmt(l.monthlyPayment / 4.33)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="text-align:right;">
+              <div class="pay-card-amount" style="color:var(--amber)">${fmt(l.monthlyPayment)}</div>
+              <div style="font-size:11px;color:var(--text2);">/ mes actual</div>
+            </div>
+            <div class="pay-card-actions">
+              <button class="btn-icon btn-delete" onclick="deleteLoan('${l.id}')" aria-label="Eliminar">
+                ${iconX()}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        ${dueDateHtml}
+
+        <!-- Toggle: Registrar pago del mes -->
+        <button class="btn-toggle-row" id="lhist-btn-${l.id}"
+                onclick="toggleLoanHistory('${l.id}')">
+          <span>📊 Registrar / ver historial de pagos ${history.length > 0 ? `(${history.length})` : ''}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+
+        <!-- History expand panel -->
+        <div class="expand-panel" id="lhist-${l.id}">
+          <!-- Register new payment form -->
+          <div style="margin-bottom:${history.length > 0 ? '12px' : '0'}">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;
+                        letter-spacing:0.4px;margin-bottom:8px;">
+              ${alreadyThisMonth ? '✅ Actualizar pago de este mes' : '➕ Registrar pago del mes'}
+            </div>
+            <div class="mini-form">
+              <div class="mini-form-row">
+                <input type="month" id="lpay-month-${l.id}"
+                       value="${thisMonth}" />
+                <input type="number" id="lpay-amount-${l.id}"
+                       placeholder="Monto ($)" value="${l.monthlyPayment}"
+                       min="0" step="0.01" inputmode="decimal" />
+              </div>
+              <input type="text" id="lpay-note-${l.id}"
+                     placeholder="Nota opcional (ej. interés bajó)" />
+              <div style="display:flex;gap:8px;">
+                <button class="btn-mini-add" style="flex:1"
+                        onclick="registerLoanPayment('${l.id}')">Guardar pago</button>
+                <button class="btn-mini-secondary"
+                        onclick="toggleLoanHistory('${l.id}')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- History list -->
+          ${history.length > 0 ? `
+            <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;
+                        letter-spacing:0.4px;margin-bottom:4px;">Historial</div>
+            ${historyRows}
+          ` : '<div style="font-size:13px;color:var(--text3);text-align:center;padding:8px 0;">Sin pagos registrados aún</div>'}
+        </div>
+
+        <!-- Inline edit row for current amount -->
+        <div class="loan-edit-row" id="ledit-row-${l.id}">
+          <input type="number" id="ledit-input-${l.id}"
+                 value="${l.monthlyPayment}" min="0" step="0.01"
+                 inputmode="decimal" placeholder="Nuevo monto" />
+          <button class="btn-save" onclick="saveLoanEdit('${l.id}')">Guardar</button>
+          <button class="btn-cancel" onclick="toggleLoanEdit('${l.id}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('loan-total-monthly').textContent = fmt(totalMonthly);
+  document.getElementById('loan-total-weekly').textContent  = fmt(totalWeekly) + '/sem';
+}
+
+/** Format 'YYYY-MM' → 'Abr 2026' */
+function fmtMonth(ym) {
+  if (!ym) return '';
+  const [y, m] = ym.split('-');
+  const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+  return d.toLocaleDateString('es-MX', { month: 'short', year: 'numeric' });
+}
+
+function toggleLoanHistory(id) {
+  const panel = document.getElementById('lhist-' + id);
+  const btn   = document.getElementById('lhist-btn-' + id);
+  panel.classList.toggle('open');
+  btn.classList.toggle('open');
+}
+
+function toggleLoanEdit(id) {
+  const row = document.getElementById('ledit-row-' + id);
+  row.classList.toggle('open');
+  if (row.classList.contains('open')) document.getElementById('ledit-input-' + id).focus();
+}
+
+function saveLoanEdit(id) {
+  const newVal = parseFloat(document.getElementById('ledit-input-' + id).value);
+  if (!newVal || newVal <= 0) return showToast('Monto inválido');
+  const loans = load('pf_loans', DEFAULT_LOANS);
+  const loan  = loans.find(l => l.id === id);
+  if (loan) { loan.monthlyPayment = newVal; save('pf_loans', loans); }
+  showToast('Monto actualizado ✓');
+  renderAll();
+}
+
+/** Register or update the payment for a given month */
+function registerLoanPayment(id) {
+  const month  = document.getElementById('lpay-month-' + id).value;
+  const amount = parseFloat(document.getElementById('lpay-amount-' + id).value);
+  const note   = document.getElementById('lpay-note-' + id).value.trim();
+
+  if (!month)              return showToast('Selecciona un mes');
+  if (!amount || amount <= 0) return showToast('Monto inválido');
+
+  const loans = load('pf_loans', DEFAULT_LOANS);
+  const loan  = loans.find(l => l.id === id);
+  if (!loan) return;
+
+  if (!loan.paymentHistory) loan.paymentHistory = [];
+
+  // Replace existing entry for same month, or add new
+  const existing = loan.paymentHistory.find(p => p.month === month);
+  if (existing) {
+    existing.amount = amount;
+    existing.note   = note;
+  } else {
+    loan.paymentHistory.push({ month, amount, note });
+    // Sort ascending
+    loan.paymentHistory.sort((a, b) => a.month.localeCompare(b.month));
+  }
+
+  // Update the current monthlyPayment to the latest registered amount
+  const sorted = loan.paymentHistory.slice().sort((a, b) => b.month.localeCompare(a.month));
+  loan.monthlyPayment = sorted[0].amount;
+
+  save('pf_loans', loans);
+  showToast(`Pago de ${fmtMonth(month)} guardado ✓`);
+  renderAll();
+}
+
+function deleteLoanPayment(loanId, month) {
+  const loans = load('pf_loans', DEFAULT_LOANS);
+  const loan  = loans.find(l => l.id === loanId);
+  if (!loan || !loan.paymentHistory) return;
+  loan.paymentHistory = loan.paymentHistory.filter(p => p.month !== month);
+  // Recalculate current payment from latest remaining history entry
+  if (loan.paymentHistory.length > 0) {
+    const sorted = loan.paymentHistory.slice().sort((a, b) => b.month.localeCompare(a.month));
+    loan.monthlyPayment = sorted[0].amount;
+  }
+  save('pf_loans', loans);
+  renderAll();
+}
+
+function addLoan() {
+  const name    = document.getElementById('loan-name').value.trim();
+  const payment = parseFloat(document.getElementById('loan-payment').value);
+  const dueDay  = parseInt(document.getElementById('loan-dueday').value) || null;
+  if (!name)                    return showToast('Escribe un nombre');
+  if (!payment || payment <= 0) return showToast('Monto inválido');
+  if (dueDay && (dueDay < 1 || dueDay > 31)) return showToast('Día de pago debe ser 1–31');
+  const loans = load('pf_loans', []);
+  loans.push({ id: uid(), name, monthlyPayment: payment, dueDay, paymentHistory: [] });
+  save('pf_loans', loans);
+  document.getElementById('loan-name').value    = '';
+  document.getElementById('loan-payment').value = '';
+  document.getElementById('loan-dueday').value  = '';
+  showToast('Compromiso agregado ✓');
+  renderAll();
+}
+
+function deleteLoan(id) {
+  save('pf_loans', load('pf_loans', []).filter(l => l.id !== id));
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TARJETAS DE CRÉDITO — pay date, credit limit, linked expenses
+   Data model: { id, bank, cardName, limit, payDay }
+═══════════════════════════════════════════════════════════════════ */
+function renderCards() {
+  const cards    = load('pf_cards',    []);
+  const expenses = load('pf_expenses', []);
+  const el       = document.getElementById('card-list');
+  const wrap     = document.getElementById('card-total-wrap');
+  const totalLimit = cards.reduce((s, c) => s + (c.limit || 0), 0);
+
+  // Update card selector in the expense form
+  populateCardSelector(cards);
+
+  if (totalLimit > 0) {
+    wrap.style.display = 'block';
+    document.getElementById('card-total-limit').textContent = fmt(totalLimit);
+  } else {
+    wrap.style.display = 'none';
+  }
+
+  if (cards.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="margin-bottom:12px">Sin tarjetas registradas</div>';
+    return;
+  }
+
+  el.innerHTML = cards.map(c => {
+    // Pay date countdown
+    const payDate = nextOccurrence(c.payDay);
+    const payDays = daysUntil(payDate);
+    const payCls  = urgencyClass(payDays);
+
+    // Expenses linked to this card — only open cycle (not archived)
+    const openCycle = c.openCycle || new Date().toISOString().slice(0, 7);
+    const cardExps  = expenses.filter(e => e.cardId === c.id && e.cycle === openCycle);
+    const cardTotal = cardExps.reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    const usedPct   = c.limit > 0 ? Math.min(100, (cardTotal / c.limit) * 100) : 0;
+    const barColor  = usedPct > 85 ? 'var(--red)' : usedPct > 60 ? 'var(--amber)' : 'var(--purple)';
+
+    // Expense list rows (most recent first by insertion = reverse)
+    const expRows = cardExps.slice().reverse().map(e => `
+      <div class="card-exp-item">
+        <div style="flex:1;min-width:0;">
+          <div class="card-exp-name">${escHtml(e.description)}</div>
+          <div class="card-exp-meta">${CAT_LABEL[e.category] ?? e.category} · ${FREQ_LABEL[e.frequency]}</div>
+        </div>
+        <div class="card-exp-amount">${fmt(toCardDisplay(e.amount, e.frequency))}</div>
+        <button class="btn-icon btn-delete" style="padding:2px"
+                onclick="deleteExpense('${e.id}')" aria-label="Eliminar">
+          ${iconX()}
+        </button>
+      </div>`).join('');
+
+    const available = c.limit > 0 ? c.limit - cardTotal : null;
+
+    return `
+    <div class="pay-card" id="ccard-${c.id}">
+      <div class="pay-card-top">
+        <div style="flex:1;min-width:0;">
+          <div class="pay-card-title">💳 ${escHtml(c.bank)}</div>
+          <div class="pay-card-sub">${escHtml(c.cardName)}</div>
+        </div>
+        <div class="pay-card-actions">
+          <button class="btn-icon btn-delete" onclick="deleteCard('${c.id}')" aria-label="Eliminar">
+            ${iconX()}
+          </button>
+        </div>
+      </div>
+
+      <!-- Limit usage bar + available/used summary -->
+      ${c.limit > 0 ? `
+        <div class="limit-bar-wrap">
+          <div class="limit-bar-labels">
+            <span>Gastado: <strong style="color:${barColor}">${fmt(cardTotal)}</strong></span>
+            <span>Disponible: <strong style="color:var(--green)">${fmt(available)}</strong></span>
+          </div>
+          <div class="progress-bar-wrap" style="height:10px;">
+            <div class="progress-bar-fill" style="width:${usedPct}%;background:${barColor}"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text3);text-align:right;margin-top:3px;">
+            ${Math.round(usedPct)}% de ${fmt(c.limit)}
+          </div>
+        </div>` : ''}
+
+      <!-- "A PAGAR" highlight box -->
+      ${cardTotal > 0 ? `
+        <div style="margin-top:10px;background:${payCls === 'urgent' ? 'rgba(255,69,58,0.1)' : payCls === 'warning' ? 'rgba(255,159,10,0.1)' : 'rgba(50,215,75,0.08)'};
+                    border:1.5px solid ${payCls === 'urgent' ? 'rgba(255,69,58,0.3)' : payCls === 'warning' ? 'rgba(255,159,10,0.3)' : 'rgba(50,215,75,0.2)'};
+                    border-radius:var(--radius-sm);padding:10px 12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+            <div>
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;color:var(--text2);">
+                💳 A pagar antes del ${fmtDate(payDate)}
+              </div>
+              <div style="font-size:26px;font-weight:700;letter-spacing:-1px;margin-top:2px;
+                          color:${payCls === 'urgent' ? 'var(--red)' : payCls === 'warning' ? 'var(--amber)' : 'var(--text)'}">
+                ${fmt(cardTotal)}
+              </div>
+            </div>
+            <span class="date-pill ${payCls}">${daysLabel(payDays)}</span>
+          </div>
+        </div>` : `
+        <!-- No expenses yet — just show pay date quietly -->
+        <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+          <div>
+            <div class="date-block-label">💰 Límite de pago</div>
+            <div class="date-block-date">Día ${c.payDay} · ${fmtDate(payDate)}</div>
+          </div>
+          <span class="date-pill ${payCls}">${daysLabel(payDays)}</span>
+        </div>`}
+
+      <!-- Cycle navigator -->
+      ${(() => {
+        const isClosed = (c.closedCycles || []).some(cc => cc.cycle === openCycle);
+        const prevCycle = cyclePrev(openCycle);
+        const nextCycle = cycleNext(openCycle);
+        const thisMonth = new Date().toISOString().slice(0, 7);
+        return `
+        <div style="margin-top:10px;background:var(--bg3);border-radius:var(--radius-sm);padding:8px 10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <button onclick="setCardCycle('${c.id}','${prevCycle}')"
+                    style="background:none;border:1.5px solid var(--border);border-radius:6px;
+                           padding:4px 10px;font-size:13px;font-family:inherit;cursor:pointer;color:var(--text2);">‹</button>
+            <div style="text-align:center;flex:1;">
+              <div style="font-size:12px;font-weight:600;color:var(--text);">📆 ${fmtMonth(openCycle)}</div>
+              <div style="font-size:10px;color:${isClosed ? 'var(--green)' : 'var(--amber)'};margin-top:1px;">
+                ${isClosed ? '✅ Pagado' : '🔴 Pendiente de pago'}
+              </div>
+            </div>
+            <button onclick="setCardCycle('${c.id}','${nextCycle}')"
+                    style="background:none;border:1.5px solid var(--border);border-radius:6px;
+                           padding:4px 10px;font-size:13px;font-family:inherit;cursor:pointer;color:var(--text2);">›</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:8px;">
+            ${!isClosed && cardTotal > 0 ? `
+            <button onclick="closeCardCycle('${c.id}')"
+                    style="flex:1;background:rgba(50,215,75,0.12);color:var(--green);border:1.5px solid rgba(50,215,75,0.3);
+                           border-radius:6px;padding:5px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;">
+              ✅ Marcar como pagado
+            </button>` : ''}
+            ${isClosed ? `
+            <button onclick="reopenCardCycle('${c.id}','${openCycle}')"
+                    style="flex:1;background:rgba(255,159,10,0.1);color:var(--amber);border:1.5px solid rgba(255,159,10,0.3);
+                           border-radius:6px;padding:5px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;">
+              ↩ Reabrir este ciclo
+            </button>` : ''}
+          </div>
+        </div>`;
+      })()}
+
+      <!-- Toggle expenses -->
+      <button class="btn-toggle-row" id="cexp-btn-${c.id}"
+              onclick="toggleCardExpenses('${c.id}')">
+        <span>🧾 Cargos del ciclo ${cardExps.length > 0 ? `(${cardExps.length}) · ${fmt(cardTotal)}` : '(0)'}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+
+      <!-- Expenses expand panel -->
+      <div class="expand-panel" id="cexp-${c.id}">
+        <!-- Mini add-expense form -->
+        <div class="mini-form" style="margin-bottom:10px;">
+          <div class="mini-form-row">
+            <input type="text" id="cexp-desc-${c.id}" placeholder="Descripción del gasto" style="flex:2" />
+            <input type="date" id="cexp-date-${c.id}" style="flex:1" />
+          </div>
+          <div class="mini-form-row">
+            <input type="number" id="cexp-amount-${c.id}"
+                   placeholder="Monto ($)" min="0" step="0.01" inputmode="decimal" />
+            <select id="cexp-freq-${c.id}">
+              <option value="once">Única vez</option>
+              <option value="monthly">Mensual</option>
+              <option value="biweekly">Quincenal</option>
+              <option value="weekly">Semanal</option>
+            </select>
+          </div>
+          <select id="cexp-cat-${c.id}">
+            <option value="food">🛒 Comida</option>
+            <option value="transport">🚗 Transporte</option>
+            <option value="rent">🏠 Renta</option>
+            <option value="subscriptions">📱 Suscripciones</option>
+            <option value="health">💊 Salud</option>
+            <option value="other">📦 Otro</option>
+          </select>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-mini-add" style="flex:1"
+                    onclick="addCardExpense('${c.id}')">➕ Agregar gasto</button>
+          </div>
+        </div>
+        <!-- Expenses list -->
+        ${cardExps.length > 0
+          ? expRows
+          : '<div style="font-size:13px;color:var(--text3);text-align:center;padding:4px 0 8px;">Sin gastos en esta tarjeta</div>'}
+
+        <!-- Pagos del mes (solo historial, sin formulario) -->
+        ${(() => {
+          const thisMonth = new Date().toISOString().slice(0, 7);
+          const monthPays = (c.payments || []).filter(p => p.date.startsWith(thisMonth));
+          if (monthPays.length === 0) return '';
+          const paid = monthPays.reduce((s, p) => s + p.amount, 0);
+          return `
+          <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;">
+            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;
+                        color:var(--text3);margin-bottom:6px;">Pagos registrados este mes · ${fmt(paid)}</div>
+            ${monthPays.slice().reverse().map(p => `
+              <div style="display:flex;justify-content:space-between;align-items:center;
+                          padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;">
+                <span style="color:var(--text2)">${p.note ? escHtml(p.note) + ' · ' : ''}${p.date.slice(8,10)}/${p.date.slice(5,7)}</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <strong style="color:var(--green)">${fmt(p.amount)}</strong>
+                  <button class="btn-icon btn-delete" style="padding:2px"
+                          onclick="deleteCardPayment('${c.id}','${p.id}')" aria-label="Eliminar">
+                    ${iconX()}
+                  </button>
+                </div>
+              </div>`).join('')}
+          </div>`;
+        })()}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/** Populate the card selector in the main expense form */
+function populateCardSelector(cards) {
+  const sel = document.getElementById('exp-card-id');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— Sin asignar —</option>' +
+    cards.map(c => `<option value="${c.id}">${escHtml(c.bank)} · ${escHtml(c.cardName)}</option>`).join('');
+  if (current) sel.value = current;
+
+  // Also populate wallet selector
+  const wsel = document.getElementById('exp-wallet-id');
+  if (!wsel) return;
+  const wcurrent = wsel.value;
+  const wallets = load('pf_wallets', []);
+  wsel.innerHTML = '<option value="">— Sin asignar —</option>' +
+    wallets.map(w => `<option value="${w.id}">${escHtml(w.name)}</option>`).join('');
+  if (wcurrent) wsel.value = wcurrent;
+}
+
+/** Show/hide card or wallet selector based on payment method */
+function toggleCardSelector() {
+  const payment = document.getElementById('exp-payment').value;
+  document.getElementById('exp-card-field').style.display   = payment === 'cc'     ? 'block' : 'none';
+  document.getElementById('exp-wallet-field').style.display = payment === 'wallet' ? 'block' : 'none';
+}
+
+function toggleCardExpenses(id) {
+  const panel = document.getElementById('cexp-' + id);
+  const btn   = document.getElementById('cexp-btn-' + id);
+  panel.classList.toggle('open');
+  btn.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    document.getElementById('cexp-desc-' + id)?.focus();
+  }
+}
+
+/** Add an expense directly from the card panel */
+function addCardExpense(cardId) {
+  const desc   = document.getElementById('cexp-desc-'   + cardId).value.trim();
+  const amount = parseFloat(document.getElementById('cexp-amount-' + cardId).value);
+  const freq   = document.getElementById('cexp-freq-'   + cardId).value;
+  const cat    = document.getElementById('cexp-cat-'    + cardId).value;
+
+  if (!desc)                  return showToast('Escribe una descripción');
+  if (!amount || amount <= 0) return showToast('Monto inválido');
+
+  const cards   = load('pf_cards', []);
+  const card    = cards.find(c => c.id === cardId);
+  const cycle   = card?.openCycle || new Date().toISOString().slice(0, 7);
+  const dateVal = document.getElementById('cexp-date-' + cardId)?.value;
+  const createdAt = dateVal ? new Date(dateVal + 'T12:00:00').toISOString() : new Date().toISOString();
+  const expenses = load('pf_expenses', []);
+  expenses.push({ id: uid(), description: desc, amount, category: cat,
+                  frequency: freq, payment: 'cc', cardId, cycle, createdAt });
+  save('pf_expenses', expenses);
+
+  document.getElementById('cexp-desc-'   + cardId).value = '';
+  document.getElementById('cexp-amount-' + cardId).value = '';
+  document.getElementById('cexp-date-'   + cardId).value = '';
+  showToast('Gasto agregado a la tarjeta ✓');
+  renderAll();
+  // Re-open the panel after re-render
+  setTimeout(() => {
+    document.getElementById('cexp-' + cardId)?.classList.add('open');
+    document.getElementById('cexp-btn-' + cardId)?.classList.add('open');
+  }, 50);
+}
+
+/**
+ * Close the current billing cycle for a card.
+ * Advances openCycle to next month so new charges start fresh.
+ * Old expenses stay in pf_expenses but belong to the previous cycle label,
+ * so they won't appear in the new cycle's totals.
+ */
+/** Returns YYYY-MM of the previous month */
+function cyclePrev(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+}
+/** Returns YYYY-MM of the next month */
+function cycleNext(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/** Navigate the card to a different cycle month without closing anything */
+function setCardCycle(cardId, cycle) {
+  const cards = load('pf_cards', []);
+  const card  = cards.find(c => c.id === cardId);
+  if (!card) return;
+  card.openCycle = cycle;
+  save('pf_cards', cards);
+  renderAll();
+  setTimeout(() => {
+    document.getElementById('cexp-' + cardId)?.classList.add('open');
+    document.getElementById('cexp-btn-' + cardId)?.classList.add('open');
+  }, 50);
+}
+
+/** Mark the current cycle as paid (closed) without moving to next month */
+function closeCardCycle(cardId) {
+  const cards = load('pf_cards', []);
+  const card  = cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const cycle = card.openCycle || new Date().toISOString().slice(0, 7);
+  if (!confirm(`¿Marcar el ciclo de ${fmtMonth(cycle)} como pagado?\n\nPodrás reabrirlo en cualquier momento si te equivocaste.`)) return;
+
+  if (!card.closedCycles) card.closedCycles = [];
+  // Avoid duplicates
+  if (!card.closedCycles.some(cc => cc.cycle === cycle)) {
+    const expenses  = load('pf_expenses', []);
+    const cycleTotal = expenses
+      .filter(e => e.cardId === cardId && e.cycle === cycle)
+      .reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    card.closedCycles.push({ cycle, total: cycleTotal, closedAt: new Date().toISOString() });
+  }
+  save('pf_cards', cards);
+  showToast(`Ciclo ${fmtMonth(cycle)} marcado como pagado ✓`);
+  renderAll();
+}
+
+/** Reopen a previously closed cycle (undo a mistake) */
+function reopenCardCycle(cardId, cycle) {
+  if (!confirm(`¿Reabrir el ciclo de ${fmtMonth(cycle)}?\nSus cargos volverán a aparecer como pendientes.`)) return;
+  const cards = load('pf_cards', []);
+  const card  = cards.find(c => c.id === cardId);
+  if (!card) return;
+  card.closedCycles = (card.closedCycles || []).filter(cc => cc.cycle !== cycle);
+  save('pf_cards', cards);
+  showToast(`Ciclo ${fmtMonth(cycle)} reabierto ✓`);
+  renderAll();
+  setTimeout(() => {
+    document.getElementById('cexp-' + cardId)?.classList.add('open');
+    document.getElementById('cexp-btn-' + cardId)?.classList.add('open');
+  }, 50);
+}
+
+/** Toggle the inline pay form on a dashboard debt card */
+function toggleDebtPayForm(cardId) {
+  const form = document.getElementById('dpay-form-' + cardId);
+  if (!form) return;
+  const open = form.style.display === 'none';
+  form.style.display = open ? 'block' : 'none';
+  if (open) document.getElementById('dpay-amount-' + cardId)?.focus();
+}
+
+/** Register a payment from the dashboard debt summary */
+function addCardPaymentFromDashboard(cardId) {
+  const amount = parseFloat(document.getElementById('dpay-amount-' + cardId)?.value);
+  const note   = (document.getElementById('dpay-note-' + cardId)?.value || '').trim();
+  if (!amount || amount <= 0) return showToast('Ingresa un monto válido');
+
+  const cards = load('pf_cards', []);
+  const card  = cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  if (!card.payments) card.payments = [];
+  card.payments.push({ id: uid(), date: new Date().toISOString().slice(0, 10), amount, note });
+  save('pf_cards', cards);
+  // Card payments are deducted from available income via calcTotals (card.payments sum),
+  // so no separate expense entry is needed.
+  showToast('Pago registrado ✓ — descontado del disponible');
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WALLETS (MONEDEROS / VALES)
+═══════════════════════════════════════════════════════════════════ */
+function addWallet() {
+  const name   = document.getElementById('wallet-name').value.trim();
+  const amount = parseFloat(document.getElementById('wallet-amount').value);
+  if (!name)             return showToast('Escribe un nombre para el monedero');
+  if (!amount || amount <= 0) return showToast('Monto inválido');
+
+  const wallets = load('pf_wallets', []);
+  wallets.push({ id: uid(), name, monthlyAmount: amount });
+  save('pf_wallets', wallets);
+
+  document.getElementById('wallet-name').value   = '';
+  document.getElementById('wallet-amount').value = '';
+  showToast('Monedero agregado ✓');
+  renderAll();
+}
+
+function deleteWallet(id) {
+  if (!confirm('¿Eliminar este monedero?')) return;
+  save('pf_wallets', load('pf_wallets', []).filter(w => w.id !== id));
+  renderAll();
+}
+
+function renderWallets() {
+  const wallets  = load('pf_wallets',  []);
+  const expenses = load('pf_expenses', []);
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const listEl   = document.getElementById('wallet-list');
+  const dashWrap = document.getElementById('d-wallets-wrap');
+  const dashList = document.getElementById('d-wallets-list');
+
+  // ── Income page list ──
+  if (listEl) {
+    if (wallets.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">Sin monederos registrados</div>';
+    } else {
+      listEl.innerHTML = wallets.map(w => {
+        const spent = expenses
+          .filter(e => e.payment === 'wallet' && e.walletId === w.id)
+          .reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+        const left = Math.max(0, w.monthlyAmount - spent);
+        const pct  = w.monthlyAmount > 0 ? Math.min(100, (spent / w.monthlyAmount) * 100) : 0;
+        const barColor = pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--amber)' : 'var(--green)';
+        return `
+        <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <div class="list-item-name">🎫 ${escHtml(w.name)}</div>
+              <div class="list-item-meta">Recarga mensual: ${fmt(w.monthlyAmount)}</div>
+            </div>
+            <button class="btn-icon btn-delete" onclick="deleteWallet('${w.id}')">${iconX()}</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);">
+            <span>Gastado: <strong style="color:${barColor}">${fmt(spent)}</strong></span>
+            <span>Disponible: <strong style="color:var(--green)">${fmt(left)}</strong></span>
+          </div>
+          <div class="progress-bar-wrap" style="height:8px;">
+            <div class="progress-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // ── Dashboard cards ──
+  if (!dashWrap || !dashList) return;
+  if (wallets.length === 0) { dashWrap.style.display = 'none'; return; }
+  dashWrap.style.display = 'block';
+
+  dashList.innerHTML = wallets.map(w => {
+    const spent = expenses
+      .filter(e => e.payment === 'wallet' && e.walletId === w.id)
+      .reduce((s, e) => s + toCardDisplay(e.amount, e.frequency), 0);
+    const left = Math.max(0, w.monthlyAmount - spent);
+    const pct  = w.monthlyAmount > 0 ? Math.min(100, (spent / w.monthlyAmount) * 100) : 0;
+    const barColor = pct > 85 ? 'var(--red)' : pct > 60 ? 'var(--amber)' : 'var(--green)';
+    return `
+    <div style="background:var(--bg2);border-radius:var(--radius-sm);padding:12px 14px;
+                margin-bottom:8px;box-shadow:var(--shadow);">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;">
+        <div style="font-size:14px;font-weight:600;">🎫 ${escHtml(w.name)}</div>
+        <div style="font-size:22px;font-weight:700;color:${left > 0 ? 'var(--green)' : 'var(--red)'}">
+          ${fmt(left)}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px;">
+        <span>Gastado ${fmt(spent)} de ${fmt(w.monthlyAmount)}</span>
+        <span>${Math.round(pct)}% usado</span>
+      </div>
+      <div class="progress-bar-wrap" style="height:8px;">
+        <div class="progress-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/** Remove a specific card payment */
+function deleteCardPayment(cardId, paymentId) {
+  const cards = load('pf_cards', []);
+  const card  = cards.find(c => c.id === cardId);
+  if (!card) return;
+  card.payments = (card.payments || []).filter(p => p.id !== paymentId);
+  save('pf_cards', cards);
+  renderAll();
+  setTimeout(() => {
+    document.getElementById('cexp-' + cardId)?.classList.add('open');
+    document.getElementById('cexp-btn-' + cardId)?.classList.add('open');
+  }, 50);
+}
+
+function addCard() {
+  const bank   = document.getElementById('card-bank').value.trim();
+  const name   = document.getElementById('card-name').value.trim();
+  const limit  = parseFloat(document.getElementById('card-limit').value) || 0;
+  const payDay = parseInt(document.getElementById('card-payday').value);
+
+  if (!bank)                                return showToast('Escribe el nombre del banco');
+  if (!name)                                return showToast('Escribe un alias para la tarjeta');
+  if (!payDay || payDay < 1 || payDay > 31) return showToast('Día límite de pago inválido (1–31)');
+
+  const cards = load('pf_cards', []);
+  cards.push({ id: uid(), bank, cardName: name, limit, payDay });
+  save('pf_cards', cards);
+
+  document.getElementById('card-bank').value   = '';
+  document.getElementById('card-name').value   = '';
+  document.getElementById('card-limit').value  = '';
+  document.getElementById('card-payday').value = '';
+  showToast('Tarjeta agregada ✓');
+  renderAll();
+}
+
+function deleteCard(id) {
+  // Also remove expenses linked to this card
+  const expenses = load('pf_expenses', []).filter(e => e.cardId !== id);
+  save('pf_expenses', expenses);
+  save('pf_cards', load('pf_cards', []).filter(c => c.id !== id));
+  renderAll();
+}
+
+/** Render data summary counts */
+function renderDataSummary() {
+  const rows = [
+    { icon:'💰', label:'Ingresos',    n: load('pf_incomes',  []).length },
+    { icon:'🧾', label:'Gastos',      n: load('pf_expenses', []).length },
+    { icon:'📋', label:'Compromisos', n: load('pf_loans',    []).length },
+    { icon:'💳', label:'Tarjetas',    n: load('pf_cards',    []).length },
+  ];
+  const el = document.getElementById('data-summary-rows');
+  if (el) el.innerHTML = rows.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                padding:5px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;color:var(--text2)">${r.icon} ${r.label}</span>
+      <span style="font-size:14px;font-weight:700">${r.n} registro${r.n !== 1 ? 's' : ''}</span>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EXPORT / IMPORT / CLEAR DATA
+═══════════════════════════════════════════════════════════════════ */
+
+/** Download all localStorage data as a .json file */
+function exportData() {
+  const snapshot = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    pf_incomes:  load('pf_incomes',  []),
+    pf_expenses: load('pf_expenses', []),
+    pf_loans:    load('pf_loans',    DEFAULT_LOANS),
+    pf_cards:    load('pf_cards',    []),
+    pf_settings: load('pf_settings', DEFAULT_SETTINGS),
+  };
+  const json = JSON.stringify(snapshot, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `finanzasmx-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📤 Datos exportados correctamente ✓');
+}
+
+/** Read a .json file and restore all data into localStorage */
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Basic validation — must have at least one known key
+      const known = ['pf_incomes','pf_expenses','pf_loans','pf_cards','pf_settings'];
+      const hasAny = known.some(k => k in data);
+      if (!hasAny) return showToast('❌ Archivo no reconocido');
+
+      if (data.pf_incomes)  save('pf_incomes',  data.pf_incomes);
+      if (data.pf_expenses) save('pf_expenses', data.pf_expenses);
+      if (data.pf_loans)    save('pf_loans',    data.pf_loans);
+      if (data.pf_cards)    save('pf_cards',    data.pf_cards);
+      if (data.pf_settings) save('pf_settings', data.pf_settings);
+
+      renderAll();
+      showToast('📥 Datos importados correctamente ✓');
+    } catch {
+      showToast('❌ Error al leer el archivo');
+    }
+  };
+  reader.readAsText(file);
+  // Reset so the same file can be re-imported if needed
+  event.target.value = '';
+}
+
+/** Wipe all app data after confirmation */
+function clearAllData() {
+  if (!confirm('¿Seguro que deseas borrar TODOS tus datos? Esta acción no se puede deshacer.')) return;
+  ['pf_incomes','pf_expenses','pf_loans','pf_cards','pf_settings'].forEach(k => localStorage.removeItem(k));
+  initStorage(); // re-seed default loans
+  renderAll();
+  showToast('🗑️ Datos borrados');
+}
+
+/** Render the data summary in the settings card */
+function renderDataSummary() {
+  const incomes  = load('pf_incomes',  []);
+  const expenses = load('pf_expenses', []);
+  const loans    = load('pf_loans',    []);
+  const cards    = load('pf_cards',    []);
+  const rows = [
+    { icon: '💰', label: 'Ingresos',    count: incomes.length },
+    { icon: '🧾', label: 'Gastos',      count: expenses.length },
+    { icon: '📋', label: 'Compromisos', count: loans.length },
+    { icon: '💳', label: 'Tarjetas',    count: cards.length },
+  ];
+  const el = document.getElementById('data-summary-rows');
+  if (!el) return;
+  el.innerHTML = rows.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;
+                padding:5px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;color:var(--text2)">${r.icon} ${r.label}</span>
+      <span style="font-size:14px;font-weight:700;">${r.count} registro${r.count !== 1 ? 's' : ''}</span>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WEEKLY CHECK-IN
+═══════════════════════════════════════════════════════════════════ */
+function calcWeekly() {
+  const weeklyIncome = parseFloat(document.getElementById('weekly-income').value) || 0;
+  const { totalLoans, settings } = calcTotals();
+  const weeklyLoan    = totalLoans / 4.33;
+  const weeklySavings = weeklyIncome * (settings.savingsPercent / 100);
+  const weeklyFree    = Math.max(0, weeklyIncome - weeklyLoan - weeklySavings);
+  document.getElementById('w-loans').textContent   = fmt(weeklyLoan);
+  document.getElementById('w-savings').textContent = fmt(weeklySavings);
+  document.getElementById('w-free').textContent    = fmt(weeklyFree);
+  document.getElementById('w-free').style.color    = weeklyFree > 0 ? 'var(--green)' : 'var(--red)';
+}
+
+function updateSavingsPct(val) {
+  document.getElementById('savings-pct-display').textContent = val + '%';
+  document.getElementById('bud-pct').textContent = val;
+  const settings = load('pf_settings', DEFAULT_SETTINGS);
+  settings.savingsPercent = parseInt(val);
+  save('pf_settings', settings);
+  renderAll();
+  calcWeekly();
+}
+
+function renderWeekly() {
+  const { totalIncome, totalExpenses, totalLoans, savingsAmt, available, settings } = calcTotals();
+  document.getElementById('savings-slider').value             = settings.savingsPercent;
+  document.getElementById('savings-pct-display').textContent = settings.savingsPercent + '%';
+  document.getElementById('bud-pct').textContent              = settings.savingsPercent;
+  document.getElementById('bud-income').textContent    = fmt(totalIncome);
+  document.getElementById('bud-expenses').textContent  = fmt(totalExpenses);
+  document.getElementById('bud-loans').textContent     = fmt(totalLoans);
+  document.getElementById('bud-savings').textContent   = fmt(savingsAmt);
+  document.getElementById('bud-available').textContent = fmt(Math.max(0, available));
+  document.getElementById('bud-available').style.color = available >= 0 ? 'var(--green)' : 'var(--red)';
+  calcWeekly();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MASTER RENDER
+═══════════════════════════════════════════════════════════════════ */
+function renderAll() {
+  try { renderDashboard();         } catch(e) { console.error('renderDashboard', e); }
+  try { renderIncome();            } catch(e) { console.error('renderIncome', e); }
+  try { renderWeeklyPayHistory();  } catch(e) { console.error('renderWeeklyPayHistory', e); }
+  try { renderExpenses();          } catch(e) { console.error('renderExpenses', e); }
+  try { renderLoans();             } catch(e) { console.error('renderLoans', e); }
+  try { renderCards();             } catch(e) { console.error('renderCards', e); }
+  try { renderWeekly();            } catch(e) { console.error('renderWeekly', e); }
+  try { renderWallets();           } catch(e) { console.error('renderWallets', e); }
+  try { renderDataSummary();       } catch(e) { console.error('renderDataSummary', e); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INLINE SVG ICONS
+═══════════════════════════════════════════════════════════════════ */
+function iconX() {
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+}
+function iconPencil() {
+  return `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FAVICON — generated via canvas, injected into <head>
+═══════════════════════════════════════════════════════════════════ */
+function injectFavicon() {
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 64;
+    const ctx = cv.getContext('2d');
+
+    // Rounded square background
+    const r = 14;
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(64 - r, 0);
+    ctx.quadraticCurveTo(64, 0, 64, r);
+    ctx.lineTo(64, 64 - r);
+    ctx.quadraticCurveTo(64, 64, 64 - r, 64);
+    ctx.lineTo(r, 64); ctx.quadraticCurveTo(0, 64, 0, 64 - r);
+    ctx.lineTo(0, r);  ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath();
+    ctx.fillStyle = '#3A82F7';
+    ctx.fill();
+
+    // $ symbol
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 38px -apple-system, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', 32, 34);
+
+    const link = document.createElement('link');
+    link.rel  = 'icon';
+    link.type = 'image/png';
+    link.href = cv.toDataURL('image/png');
+    document.head.appendChild(link);
+
+    // Also apple-touch-icon (180px)
+    const cv2 = document.createElement('canvas');
+    cv2.width = cv2.height = 180;
+    const ctx2 = cv2.getContext('2d');
+    const r2 = 40;
+    ctx2.beginPath();
+    ctx2.moveTo(r2,0); ctx2.lineTo(180-r2,0);
+    ctx2.quadraticCurveTo(180,0,180,r2);
+    ctx2.lineTo(180,180-r2); ctx2.quadraticCurveTo(180,180,180-r2,180);
+    ctx2.lineTo(r2,180); ctx2.quadraticCurveTo(0,180,0,180-r2);
+    ctx2.lineTo(0,r2); ctx2.quadraticCurveTo(0,0,r2,0);
+    ctx2.closePath();
+    ctx2.fillStyle = '#3A82F7';
+    ctx2.fill();
+    ctx2.fillStyle = '#FFFFFF';
+    ctx2.font = 'bold 108px -apple-system, Arial, sans-serif';
+    ctx2.textAlign = 'center';
+    ctx2.textBaseline = 'middle';
+    ctx2.fillText('$', 90, 96);
+
+    const apple = document.createElement('link');
+    apple.rel  = 'apple-touch-icon';
+    apple.href = cv2.toDataURL('image/png');
+    document.head.appendChild(apple);
+  } catch { /* canvas unavailable */ }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PWA: MANIFEST + SERVICE WORKER
+═══════════════════════════════════════════════════════════════════ */
+function registerPWA() {
+  const manifest = {
+    name: 'FinanzasMX', short_name: 'FinanzasMX',
+    description: 'Rastreador de finanzas personales en MXN',
+    start_url: './', display: 'standalone',
+    background_color: '#1C1C1E', theme_color: '#1C1C1E',
+    orientation: 'portrait',
+    icons: [
+      { src: buildPWAIcon(192), sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: buildPWAIcon(512), sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+    ],
+  };
+  const mBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const mLink = document.createElement('link');
+  mLink.rel  = 'manifest';
+  mLink.href = URL.createObjectURL(mBlob);
+  document.head.appendChild(mLink);
+
+  if ('serviceWorker' in navigator) {
+    const swCode = `
+const CACHE='finanzasmx-v1';
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./'])));self.skipWaiting();});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request)));});`;
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    navigator.serviceWorker.register(URL.createObjectURL(swBlob), { scope: './' }).catch(()=>{});
+  }
+}
+
+function buildPWAIcon(size) {
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#1C1C1E';
+    ctx.fillRect(0, 0, size, size);
+    const r = size * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(r,0); ctx.lineTo(size-r,0);
+    ctx.quadraticCurveTo(size,0,size,r);
+    ctx.lineTo(size,size-r); ctx.quadraticCurveTo(size,size,size-r,size);
+    ctx.lineTo(r,size); ctx.quadraticCurveTo(0,size,0,size-r);
+    ctx.lineTo(0,r); ctx.quadraticCurveTo(0,0,r,0);
+    ctx.closePath();
+    ctx.fillStyle = '#3A82F7';
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold ${Math.round(size*0.45)}px -apple-system, Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', size/2, size/2 + size*0.03);
+    return cv.toDataURL('image/png');
+  } catch { return ''; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════════════════════════════ */
+initStorage();
+injectFavicon();
+registerPWA();
+renderAll();
+// Default expense date to today
+const _todayVal = new Date().toISOString().slice(0, 10);
+const _expDate = document.getElementById('exp-date');
+if (_expDate) _expDate.value = _todayVal;
+/* ═══════════════════════════════════════════════════════════════════
+   GOOGLE DRIVE SYNC
+═══════════════════════════════════════════════════════════════════ */
+(function(){
+  const SCOPE='https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+  const DRIVE_FILE='finanzasmx-sync.json';
+  const LS_CID='gd_cid_fin';
+  const LS_TOKEN='gd_token_fin';
+  const LS_SYNC='gd_sync_fin';
+  const DATA_KEYS=['pf_incomes','pf_expenses','pf_loans','pf_cards','pf_settings'];
+
+  let gToken=null, gFileId=null, gUser='';
+
+  function pad(n){return String(n).padStart(2,'0');}
+
+  function setDot(state){
+    const d=document.getElementById('drive-dot');
+    d.className='drive-dot';
+    if(state==='on')d.classList.add('on');
+    else if(state==='busy')d.classList.add('busy');
+    else if(state==='err')d.classList.add('err');
+  }
+  function setBar(user,sub,state){
+    setDot(state||'');
+    document.getElementById('drive-user').textContent=user;
+    document.getElementById('drive-sub').textContent=sub;
+  }
+  function showSyncBtns(){
+    document.getElementById('btn-login').style.display='none';
+    document.getElementById('btn-up').style.display='inline-block';
+    document.getElementById('btn-up').disabled=false;
+    document.getElementById('btn-dn').style.display='inline-block';
+    document.getElementById('btn-dn').disabled=false;
+    document.getElementById('btn-out').style.display='inline-block';
+  }
+  function hideSyncBtns(){
+    document.getElementById('btn-login').style.display='inline-block';
+    document.getElementById('btn-up').style.display='none';
+    document.getElementById('btn-dn').style.display='none';
+    document.getElementById('btn-out').style.display='none';
+  }
+  function lockBtns(v){
+    document.getElementById('btn-up').disabled=v;
+    document.getElementById('btn-dn').disabled=v;
+  }
+  function syncLabel(){
+    const ts=localStorage.getItem(LS_SYNC);
+    if(!ts)return 'Sin sincronizar';
+    const d=new Date(parseInt(ts));
+    return 'Último sync '+pad(d.getHours())+':'+pad(d.getMinutes());
+  }
+
+  window.saveDriveCID=function(){
+    const v=document.getElementById('drive-cid-input').value.trim();
+    if(!v||!v.includes('.apps.googleusercontent.com')){showToast('❌ Client ID inválido');return;}
+    localStorage.setItem(LS_CID,v);
+    document.getElementById('drive-setup-modal').style.display='none';
+    initDriveBar();
+    showToast('✅ Client ID guardado');
+  };
+
+  window.driveLogin=function(){
+    const cid=localStorage.getItem(LS_CID);
+    if(!cid){document.getElementById('drive-setup-modal').style.display='flex';return;}
+    const redirect=location.href.split('#')[0];
+    location.href='https://accounts.google.com/o/oauth2/v2/auth'
+      +'?client_id='+encodeURIComponent(cid)
+      +'&redirect_uri='+encodeURIComponent(redirect)
+      +'&response_type=token'
+      +'&scope='+encodeURIComponent(SCOPE)
+      +'&prompt=select_account';
+  };
+
+  window.driveLogout=function(){
+    gToken=null;gFileId=null;gUser='';
+    localStorage.removeItem(LS_TOKEN);
+    setBar('Sin sesión','Presiona "Iniciar sesión"','');
+    hideSyncBtns();
+    showToast('Sesión cerrada');
+  };
+
+  async function fetchUser(){
+    const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+gToken}});
+    if(!r.ok)throw new Error('Token inválido');
+    const j=await r.json();return j.email||j.sub;
+  }
+
+  async function findFile(){
+    const r=await fetch(
+      'https://www.googleapis.com/drive/v3/files?q=name+%3D+%22'+DRIVE_FILE+'%22+and+trashed+%3D+false&fields=files(id)',
+      {headers:{Authorization:'Bearer '+gToken}});
+    if(!r.ok)throw new Error('Error buscando archivo ('+r.status+')');
+    const j=await r.json();
+    return j.files&&j.files.length?j.files[0].id:null;
+  }
+
+  window.driveUpload=async function(){
+    if(!gToken){showToast('Inicia sesión primero');return;}
+    lockBtns(true);setBar(gUser,'Subiendo...','busy');
+    try{
+      if(!gFileId)gFileId=await findFile();
+      const snapshot={version:2,syncedAt:new Date().toISOString()};
+      DATA_KEYS.forEach(k=>{try{snapshot[k]=JSON.parse(localStorage.getItem(k)||'null');}catch(e){}});
+      const body=JSON.stringify(snapshot);
+      let r;
+      if(gFileId){
+        r=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+gFileId+'?uploadType=media',
+          {method:'PATCH',headers:{Authorization:'Bearer '+gToken,'Content-Type':'application/json'},body});
+      }else{
+        const boundary='b'+Date.now();
+        const meta=JSON.stringify({name:DRIVE_FILE});
+        const mp='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n'
+          +'--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+body+'\r\n'
+          +'--'+boundary+'--';
+        r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+          {method:'POST',headers:{Authorization:'Bearer '+gToken,'Content-Type':'multipart/related; boundary='+boundary},body:mp});
+        const j=await r.json();if(j.id)gFileId=j.id;
+      }
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      localStorage.setItem(LS_SYNC,Date.now().toString());
+      setBar(gUser,syncLabel(),'on');
+      showToast('✅ Datos subidos a Drive');
+    }catch(e){
+      setBar(gUser,'Error: '+e.message,'err');
+      showToast('❌ '+e.message);
+    }finally{lockBtns(false);}
+  };
+
+  window.driveDownload=async function(){
+    if(!gToken){showToast('Inicia sesión primero');return;}
+    lockBtns(true);setBar(gUser,'Bajando...','busy');
+    try{
+      if(!gFileId)gFileId=await findFile();
+      if(!gFileId){showToast('No hay datos en Drive. Sube primero desde otro dispositivo.');setBar(gUser,syncLabel(),'on');return;}
+      const r=await fetch('https://www.googleapis.com/drive/v3/files/'+gFileId+'?alt=media',
+        {headers:{Authorization:'Bearer '+gToken}});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const data=await r.json();
+      DATA_KEYS.forEach(k=>{if(data[k]!==undefined&&data[k]!==null)localStorage.setItem(k,JSON.stringify(data[k]));});
+      if(typeof renderAll==='function')renderAll();
+      localStorage.setItem(LS_SYNC,Date.now().toString());
+      setBar(gUser,syncLabel(),'on');
+      showToast('✅ Datos bajados de Drive');
+    }catch(e){
+      setBar(gUser,'Error: '+e.message,'err');
+      showToast('❌ '+e.message);
+    }finally{lockBtns(false);}
+  };
+
+  function handleOAuth(){
+    if(!location.hash.includes('access_token'))return;
+    const p=new URLSearchParams(location.hash.slice(1));
+    const tok=p.get('access_token');
+    const exp=parseInt(p.get('expires_in')||'3600');
+    if(!tok)return;
+    gToken=tok;
+    localStorage.setItem(LS_TOKEN,JSON.stringify({tok,exp:Date.now()+exp*1000-60000}));
+    history.replaceState(null,'',location.pathname+location.search);
+    setBar('Conectando...','','busy');
+    fetchUser().then(email=>{
+      gUser=email;
+      setBar(email,syncLabel(),'on');
+      showSyncBtns();
+      showToast('✅ Sesión iniciada como '+email);
+    }).catch(()=>setBar('Error de sesión','','err'));
+  }
+
+  function initDriveBar(){
+    const cid=localStorage.getItem(LS_CID);
+    document.getElementById('drive-bar').style.display='flex';
+    if(!cid){setBar('Sin configurar','Toca "☁ Configurar Google Drive Sync" en Ajustes','');return;}
+    try{
+      const saved=JSON.parse(localStorage.getItem(LS_TOKEN)||'null');
+      if(saved&&saved.exp>Date.now()+30000){
+        gToken=saved.tok;
+        fetchUser().then(email=>{
+          gUser=email;
+          setBar(email,syncLabel(),'on');
+          showSyncBtns();
+        }).catch(()=>setBar('Sin sesión','Presiona "Iniciar sesión"',''));
+        return;
+      }
+    }catch(e){}
+    setBar('Sin sesión','Presiona "Iniciar sesión"','');
+    const cid2=localStorage.getItem(LS_CID);
+    if(cid2)document.getElementById('btn-login').style.display='inline-block';
+  }
+
+  // Pre-fill CID input if already saved
+  const existingCid=localStorage.getItem(LS_CID)||'';
+  if(existingCid)document.getElementById('drive-cid-input').value=existingCid;
+
+  handleOAuth();
+  initDriveBar();
+})();
+
+</script>
+</body>
+</html>
