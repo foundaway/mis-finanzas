@@ -797,6 +797,20 @@ document.getElementById('pay-dt').value=todayStr();
     if(_c){_c.bank='Plata';_c.name='TDC Plata';_c.color='plata';}
     saveState();localStorage.setItem('finj_fix_v1','1');
   }
+  if(!localStorage.getItem('finj_fix_v2')){
+    var _ajustes=[
+      {cardId:'tv6ie67h',monto:1274},
+      {cardId:'y9srj93y',monto:1087.70},
+      {cardId:'uywmukk6',monto:3908.85}
+    ];
+    _ajustes.forEach(function(a){
+      state.cardExpenses=(state.cardExpenses||[]).filter(function(e){
+        return !(e.cardId===a.cardId&&(e.date||'').slice(0,7)===mk());
+      });
+      state.cardExpenses.unshift({id:genId(),amount:a.monto,note:'Saldo actual',cardId:a.cardId,date:todayStr(),cat:'otro'});
+    });
+    saveState();localStorage.setItem('finj_fix_v2','1');
+  }
 })();
 renderDash();renderBills();renderCards();renderLoans();renderQEList();renderInc();
 </script>
