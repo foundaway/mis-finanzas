@@ -572,6 +572,10 @@ function cardSpent(cid){
 function cardPaidTotal(cid){
   return (state.cardPayments||[]).filter(function(p){return p.cardId===cid;}).reduce(function(a,b){return a+b.amount;},0);
 }
+function deletePayment(id){
+  state.cardPayments=(state.cardPayments||[]).filter(function(x){return x.id!==id;});
+  saveState();renderCards();renderDash();toast('Pago eliminado');
+}
 function openPayModal(cid,name){
   document.getElementById('pay-cid').value=cid;
   document.getElementById('pay-title').textContent='Pagar '+name;
@@ -599,7 +603,7 @@ function renderCards(){
     var pc=pct>=90?'var(--rd)':pct>=70?'var(--am)':'var(--gr)';
     var ac=avail<c.limit*0.1?'rd':avail<c.limit*0.3?'am':'gn';
     var pays=(state.cardPayments||[]).filter(function(p){return p.cardId===c.id;}).slice(0,3);
-    var log=pays.length?'<div class="cv-log"><div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.4rem">Pagos recientes</div>'+pays.map(function(p){return '<div class="cv-log-row"><span style="color:var(--tx2)">'+fmtD(p.date)+(p.note?' · '+esc(p.note):'')+'</span><span style="color:var(--gr);font-family:monospace;font-weight:700">+'+mxn(p.amount)+'</span></div>';}).join('')+'</div>':'';
+    var log=pays.length?'<div class="cv-log"><div style="font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.4rem">Pagos recientes</div>'+pays.map(function(p){return '<div class="cv-log-row"><span style="color:var(--tx2)">'+fmtD(p.date)+(p.note?' · '+esc(p.note):'')+'</span><div style="display:flex;align-items:center;gap:6px"><span style="color:var(--gr);font-family:monospace;font-weight:700">+'+mxn(p.amount)+'</span><button class="rdel" onclick="deletePayment(\''+p.id+'\')" title="Eliminar pago">×</button></div></div>';}).join('')+'</div>':'';
     return '<div class="cv">'
       +'<div class="cv-face '+c.color+'">'
       +'<div class="cv-face-row"><div>'+bankLogo(c.color)+'</div><div class="cv-face-nm">'+esc(c.name)+'</div></div>'
@@ -810,6 +814,15 @@ document.getElementById('pay-dt').value=todayStr();
       state.cardExpenses.unshift({id:genId(),amount:a.monto,note:'Saldo actual',cardId:a.cardId,date:todayStr(),cat:'otro'});
     });
     saveState();localStorage.setItem('finj_fix_v2','1');
+  }
+  if(!localStorage.getItem('finj_fix_v3')){
+    var _b=(state.bills||[]).find(function(b){return b.id==='bill-joy777';});
+    if(_b)_b.amount=3908.85;
+    var _bnu=(state.bills||[]).find(function(b){return b.id==='bill-nu';});
+    if(_bnu)_bnu.amount=1087.70;
+    var _bplata=(state.bills||[]).find(function(b){return b.id==='bill-plata';});
+    if(_bplata)_bplata.amount=1274;
+    saveState();localStorage.setItem('finj_fix_v3','1');
   }
 })();
 renderDash();renderBills();renderCards();renderLoans();renderQEList();renderInc();
