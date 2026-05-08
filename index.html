@@ -197,14 +197,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="ov" id="ov-pay">
   <div class="mdl">
     <h3 id="pay-title">Registrar pago</h3>
-    <p>Cuanto pagaste a esta tarjeta?</p>
+    <p id="pay-subtitle" style="font-size:13px;color:var(--tx2);line-height:1.5;margin-bottom:.85rem"></p>
     <input type="hidden" id="pay-cid"/>
-    <div class="fl"><label>Monto $</label><input type="number" id="pay-amt" placeholder="0.00" step="0.01"/></div>
+    <input type="hidden" id="pay-bill-id"/>
+    <div class="fl"><label>Monto pagado $</label><input type="number" id="pay-amt" placeholder="0.00" step="0.01"/></div>
     <div class="fl"><label>Fecha</label><input type="date" id="pay-dt"/></div>
     <div class="fl"><label>Nota (opcional)</label><input type="text" id="pay-note" placeholder="Pago minimo, total..."/></div>
     <div class="ma">
       <button class="bcn" onclick="document.getElementById('ov-pay').classList.remove('open')">Cancelar</button>
-      <button class="bok" onclick="savePayment()">Guardar</button>
+      <button class="bok" onclick="savePayment()">Guardar pago</button>
     </div>
   </div>
 </div>
@@ -529,9 +530,17 @@ function renderBills(){
     var urg=b.isPaid?'ok2':days<=2?'urg':days<=7?'soon':'ok2';
     var badge=b.isPaid?'<span class="bdg gn">Pagado</span>':days<=2?'<span class="bdg rd">Urgente '+days+'d</span>':days<=7?'<span class="bdg am">'+days+'d</span>':'<span class="bdg bl">Dia '+b.day+'</span>';
     var color=b.isPaid?'var(--tx3)':days<=2?'var(--rd)':days<=7?'var(--am)':'var(--tx)';
-    var tf=b.isLoan?'toggleLoanPaid("'+b.lk+'",'+b.num+')':'toggleBillPaid("'+b.id+'")';
-    var del=!b.isLoan?'<button class="rdel" onclick="deleteBill(\''+b.id+'\')">x</button>':'';
-    return '<div class="row '+urg+'" style="'+(b.isPaid?'opacity:.5':'')+'"><div class="ri" style="background:var(--s2)">'+cico(b.cat)+'</div><div class="rb"><div class="rt">'+esc(b.name)+'</div><div class="rs2">'+badge+'</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><div class="ra" style="color:'+color+'">'+mxn(b.amount)+'</div><button class="chk '+(b.isPaid?'on':'')+'" onclick="'+tf+'">'+(b.isPaid?'v':'')+'</button>'+del+'</div></div>';
+    var del=!b.isLoan?'<button class="rdel" onclick="deleteBill(\''+b.id+'\')" title="Eliminar">×</button>':'';
+    var accion='';
+    if(b.isLoan){
+      var tf='toggleLoanPaid("'+b.lk+'",'+b.num+')';
+      accion='<button class="chk '+(b.isPaid?'on':'')+'" onclick="'+tf+'">'+(b.isPaid?'✓':'')+'</button>';
+    } else if(b.isPaid){
+      accion='<button class="chk on" onclick="toggleBillPaid(\''+b.id+'\')" title="Desmarcar">✓</button>';
+    } else {
+      accion='<button style="padding:6px 12px;border:none;border-radius:var(--rs);background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap" onclick="openBillPay(\''+b.id+'\',\''+esc(b.name)+'\','+b.amount+','+(b.cat==='tarjeta'?'true':'false')+')">Pagar</button>';
+    }
+    return '<div class="row '+urg+'" style="'+(b.isPaid?'opacity:.55':'')+'"><div class="ri" style="background:var(--s2)">'+cico(b.cat)+'</div><div class="rb"><div class="rt">'+esc(b.name)+'</div><div class="rs2">'+badge+'</div></div><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><div class="ra" style="color:'+color+'">'+mxn(b.amount)+'</div>'+accion+del+'</div></div>';
   }).join(''):'<div class="empty"><div class="ei">🎉</div>Todo al corriente</div>';
 }
 
@@ -580,22 +589,47 @@ function deletePayment(id){
   state.cardPayments=(state.cardPayments||[]).filter(function(x){return x.id!==id;});
   saveState();renderCards();renderDash();toast('Pago eliminado');
 }
+var BILL_CARD={'bill-plata':'tv6ie67h','bill-cya':'c9fyd3oa','bill-mp':'s2c6vdtx','bill-joy230':'c762eqhd','bill-joy777':'uywmukk6','bill-nu':'y9srj93y'};
 function openPayModal(cid,name){
   document.getElementById('pay-cid').value=cid;
+  document.getElementById('pay-bill-id').value='';
   document.getElementById('pay-title').textContent='Pagar '+name;
-  document.getElementById('pay-amt').value='';document.getElementById('pay-note').value='';
+  document.getElementById('pay-subtitle').textContent='';
+  document.getElementById('pay-amt').value='';
+  document.getElementById('pay-note').value='';
+  document.getElementById('pay-dt').value=todayStr();
+  document.getElementById('ov-pay').classList.add('open');
+}
+function openBillPay(billId,name,amount,isCard){
+  var cid=BILL_CARD[billId]||'';
+  document.getElementById('pay-cid').value=cid;
+  document.getElementById('pay-bill-id').value=billId;
+  document.getElementById('pay-title').textContent='Pagar '+name;
+  document.getElementById('pay-subtitle').textContent=isCard?'Se registrará el pago en la tarjeta y se marcará como pagado.':'Se marcará como pagado este mes.';
+  document.getElementById('pay-amt').value=amount||'';
+  document.getElementById('pay-note').value='';
   document.getElementById('pay-dt').value=todayStr();
   document.getElementById('ov-pay').classList.add('open');
 }
 function savePayment(){
   var cid=document.getElementById('pay-cid').value;
+  var billId=document.getElementById('pay-bill-id').value;
   var amount=parseFloat(document.getElementById('pay-amt').value);
   var date=document.getElementById('pay-dt').value;
   var note=document.getElementById('pay-note').value.trim();
   if(isNaN(amount)||amount<=0){toast('Ingresa un monto valido');return;}
-  if(!state.cardPayments)state.cardPayments=[];
-  state.cardPayments.unshift({id:genId(),cardId:cid,amount:amount,date:date,note:note});
-  saveState();document.getElementById('ov-pay').classList.remove('open');renderCards();toast('Pago registrado');
+  if(cid&&cid!==''){
+    if(!state.cardPayments)state.cardPayments=[];
+    state.cardPayments.unshift({id:genId(),cardId:cid,amount:amount,date:date,note:note});
+  }
+  if(billId){
+    var b=(state.bills||[]).find(function(x){return x.id===billId;});
+    if(b){if(!b.paid)b.paid=[];var mm=mk();if(b.paid.indexOf(mm)<0)b.paid.push(mm);}
+  }
+  saveState();
+  document.getElementById('ov-pay').classList.remove('open');
+  renderCards();renderBills();renderDash();
+  toast('Pago registrado ✓');
 }
 function renderCards(){
   var el=document.getElementById('cards-grid');if(!el)return;
