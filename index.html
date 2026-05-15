@@ -322,6 +322,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div id="lp-b" style="display:none"></div>
 </div>
 
+<div class="pg" id="pg-ahorros">
+  <div class="ptitle">Ahorros SOFIPO</div>
+  <div id="sofipo-list"></div>
+</div>
+
+<!-- MODAL SOFIPO BALANCE -->
+<div class="ov" id="ov-sofipo">
+  <div class="mdl">
+    <h3 id="sofipo-modal-title">Actualizar saldo</h3>
+    <p>Ingresa el saldo actual de la cuenta.</p>
+    <input type="hidden" id="sofipo-edit-id">
+    <input type="number" id="sofipo-edit-bal" placeholder="Saldo ($)" inputmode="decimal" min="0" step="0.01">
+    <div class="ma">
+      <button class="bcn" onclick="document.getElementById('ov-sofipo').classList.remove('open')">Cancelar</button>
+      <button class="bok" onclick="saveSofipoBalance()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TABBAR -->
 <nav class="tbar">
   <button class="tb on" id="tb-dashboard" onclick="goPage('dashboard')">
@@ -347,6 +366,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <button class="tb" id="tb-loans" onclick="goPage('loans')">
     <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
     Prestamos
+  </button>
+  <button class="tb" id="tb-ahorros" onclick="goPage('ahorros')">
+    <svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.3 1.5 4.05 3 5.5l7 7 7-7z"/></svg>
+    Ahorros
   </button>
 </nav>
 
@@ -401,6 +424,13 @@ function daysUntil(d){
   if(t<now)t.setMonth(t.getMonth()+1);
   return Math.round((t-now)/864e5);
 }
+/* Días hasta una fecha concreta yyyy-mm-dd (para préstamos con fecha exacta) */
+function daysUntilDate(ds){
+  if(!ds)return 999;
+  var now=new Date();now.setHours(0,0,0,0);
+  var t=new Date(ds+'T00:00:00');
+  return Math.max(0,Math.round((t-now)/864e5));
+}
 /* Días hasta la SIGUIENTE ocurrencia (para bills ya pagados este mes) */
 function daysUntilNext(d){
   var now=new Date();now.setHours(0,0,0,0);
@@ -440,6 +470,7 @@ function goPage(id){
   else if(id==='cards')renderCards();
   else if(id==='ingresos')renderInc();
   else if(id==='loans')renderLoans();
+  else if(id==='ahorros')renderSavings();
 }
 
 /* ── DASHBOARD ── */
@@ -467,8 +498,8 @@ function renderDash(){
 
   var up=[];
   (state.bills||[]).forEach(function(b){if(!(b.paid||[]).includes(m)){var la=liveBillAmt(b);if(la>0)up.push({name:b.name,amount:la,days:daysUntil(b.day),cat:b.cat});}});
-  if(nextA)up.push({name:'Préstamo A · Pago '+nextA.num+'/'+LA.length,amount:nextA.total,days:daysUntil(18),cat:'prestamo'});
-  if(nextB)up.push({name:'Préstamo B · Pago '+nextB.num+'/'+LB.length,amount:nextB.total,days:daysUntil(20),cat:'prestamo'});
+  if(nextA)up.push({name:'Préstamo A · Pago '+nextA.num+'/'+LA.length,amount:nextA.total,days:daysUntilDate(nextA.fecha),cat:'prestamo'});
+  if(nextB)up.push({name:'Préstamo B · Pago '+nextB.num+'/'+LB.length,amount:nextB.total,days:daysUntilDate(nextB.fecha),cat:'prestamo'});
   up.sort(function(a,b){return a.days-b.days;});
   var upEl=document.getElementById('d-upcoming');
   upEl.innerHTML=up.length?up.slice(0,5).map(function(u){
@@ -527,8 +558,8 @@ function renderBills(){
   var nextA=LA.find(function(r){return paidA.indexOf(r.num)<0;});
   var nextB=LB.find(function(r){return paidB.indexOf(r.num)<0;});
   var all=[];
-  if(nextA)all.push({id:'la',name:'Préstamo A · Pago '+nextA.num+' de '+LA.length+' · Día 18',amount:nextA.total,day:18,cat:'prestamo',isLoan:true,lk:'a',num:nextA.num,isPaid:false});
-  if(nextB)all.push({id:'lb',name:'Préstamo B · Pago '+nextB.num+' de '+LB.length+' · Día 20',amount:nextB.total,day:20,cat:'prestamo',isLoan:true,lk:'b',num:nextB.num,isPaid:false});
+  if(nextA)all.push({id:'la',name:'Préstamo A · Pago '+nextA.num+' de '+LA.length,amount:nextA.total,day:18,fecha:nextA.fecha,cat:'prestamo',isLoan:true,lk:'a',num:nextA.num,isPaid:false});
+  if(nextB)all.push({id:'lb',name:'Préstamo B · Pago '+nextB.num+' de '+LB.length,amount:nextB.total,day:20,fecha:nextB.fecha,cat:'prestamo',isLoan:true,lk:'b',num:nextB.num,isPaid:false});
   (state.bills||[]).forEach(function(b){
     var live=liveBillAmt(b);
     /* tarjeta con $0 real → no aparece en pendientes (ya pagada o sin deuda) */
@@ -541,12 +572,13 @@ function renderBills(){
   if(billFilter==='paid')all=all.filter(function(x){return x.isPaid;});
   var el=document.getElementById('bills-list');
   el.innerHTML=all.length?all.map(function(b){
-    var days=daysUntil(b.day);
+    var days=b.fecha?daysUntilDate(b.fecha):daysUntil(b.day);
     var urg=b.isPaid?'ok2':days<=2?'urg':days<=7?'soon':'ok2';
-    var nd=daysUntilNext(b.day);
+    var nd=b.fecha?daysUntilDate(b.fecha):daysUntilNext(b.day);
+    var fechaLabel=b.fecha?b.fecha.slice(5).replace('-','/'):'día '+b.day;
     var badge=b.isPaid
-      ?'<span class="bdg gn">✓ Pagado</span>&nbsp;<span class="bdg bl" style="font-size:10px">Próx. día '+b.day+' · '+nd+'d</span>'
-      :days<=2?'<span class="bdg rd">Urgente — '+days+'d</span>':days<=7?'<span class="bdg am">'+days+'d</span>':'<span class="bdg bl">Día '+b.day+'</span>';
+      ?'<span class="bdg gn">✓ Pagado</span>&nbsp;<span class="bdg bl" style="font-size:10px">Próx. '+fechaLabel+' · '+nd+'d</span>'
+      :days<=2?'<span class="bdg rd">Urgente — '+days+'d</span>':days<=7?'<span class="bdg am">'+days+'d</span>':'<span class="bdg bl">'+fechaLabel+'</span>';
     var color=b.isPaid?'var(--tx3)':days<=2?'var(--rd)':days<=7?'var(--am)':'var(--tx)';
     var del=!b.isLoan?'<button class="rdel" onclick="deleteBill(\''+b.id+'\')" title="Eliminar">×</button>':'';
     var accion='';
@@ -915,7 +947,73 @@ document.getElementById('pay-dt').value=todayStr();
     if(_bplata)_bplata.amount=1274;
     saveState();localStorage.setItem('finj_fix_v3','1');
   }
+  if(!localStorage.getItem('finj_fix_v4')){
+    if(!state.sofipos)state.sofipos=[];
+    var _sofipos=[
+      {id:'sofipo-nu',name:'NU Cajita',bank:'nu',rate:0.13,balance:0},
+      {id:'sofipo-mp',name:'MP Apartado',bank:'mp',rate:0.13,balance:0}
+    ];
+    _sofipos.forEach(function(s){
+      if(!state.sofipos.find(function(x){return x.id===s.id;}))state.sofipos.push(s);
+    });
+    saveState();localStorage.setItem('finj_fix_v4','1');
+  }
 })();
+
+/* ── SOFIPO / AHORROS ── */
+function renderSavings(){
+  var list=document.getElementById('sofipo-list');
+  if(!list)return;
+  var sofipos=state.sofipos||[];
+  if(!sofipos.length){list.innerHTML='<div class="empty"><div class="ei">🏦</div>Sin cuentas de ahorro</div>';return;}
+  list.innerHTML=sofipos.map(function(s){
+    var daily=(s.balance||0)*(s.rate||0)/365;
+    var monthly=daily*30;
+    var annual=(s.balance||0)*(s.rate||0);
+    var logo=s.bank==='nu'
+      ?'<svg width="34" height="34" viewBox="0 0 34 34"><rect width="34" height="34" rx="17" fill="#820AD1"/><text x="17" y="22" text-anchor="middle" font-family="sans-serif" font-size="13" font-weight="700" fill="#fff">Nu</text></svg>'
+      :s.bank==='mp'
+      ?'<svg width="34" height="34" viewBox="0 0 34 34"><rect width="34" height="34" rx="17" fill="#009EE3"/><text x="17" y="22" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="#fff">MP</text></svg>'
+      :'<div style="width:34px;height:34px;border-radius:50%;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:16px">💰</div>';
+    return '<div class="row ok2" style="flex-direction:column;gap:10px;align-items:stretch">'
+      +'<div style="display:flex;align-items:center;gap:12px">'
+      +'<div class="ri" style="background:var(--s2)">'+logo+'</div>'
+      +'<div class="rb"><div class="rt">'+esc(s.name)+'</div>'
+      +'<div class="rs2"><span class="bdg gn">'+Math.round((s.rate||0)*100)+'% anual</span></div></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
+      +'<div class="ra" style="color:var(--gr)">'+mxn(s.balance||0)+'</div>'
+      +'<button style="padding:6px 12px;border:none;border-radius:var(--rs);background:var(--bl);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit" onclick="openSofipoEdit(\''+s.id+'\')">Editar</button>'
+      +'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+      +'<div style="background:var(--s2);border-radius:var(--rs);padding:10px;text-align:center">'
+      +'<div style="font-size:10px;color:var(--tx2);margin-bottom:4px">Diario</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--gr)">'+mxn(daily)+'</div></div>'
+      +'<div style="background:var(--s2);border-radius:var(--rs);padding:10px;text-align:center">'
+      +'<div style="font-size:10px;color:var(--tx2);margin-bottom:4px">Mensual</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--gr)">'+mxn(monthly)+'</div></div>'
+      +'<div style="background:var(--s2);border-radius:var(--rs);padding:10px;text-align:center">'
+      +'<div style="font-size:10px;color:var(--tx2);margin-bottom:4px">Anual</div>'
+      +'<div style="font-size:13px;font-weight:700;color:var(--gr)">'+mxn(annual)+'</div></div>'
+      +'</div></div>';
+  }).join('');
+}
+function openSofipoEdit(id){
+  var s=(state.sofipos||[]).find(function(x){return x.id===id;});
+  if(!s)return;
+  document.getElementById('sofipo-modal-title').textContent='Actualizar · '+s.name;
+  document.getElementById('sofipo-edit-id').value=id;
+  document.getElementById('sofipo-edit-bal').value=s.balance||'';
+  document.getElementById('ov-sofipo').classList.add('open');
+}
+function saveSofipoBalance(){
+  var id=document.getElementById('sofipo-edit-id').value;
+  var bal=parseFloat(document.getElementById('sofipo-edit-bal').value);
+  if(isNaN(bal)||bal<0){toast('Ingresa un saldo válido');return;}
+  var s=(state.sofipos||[]).find(function(x){return x.id===id;});
+  if(s){s.balance=bal;saveState();renderSavings();toast('Saldo actualizado ✓');}
+  document.getElementById('ov-sofipo').classList.remove('open');
+}
+
 renderDash();renderBills();renderCards();renderLoans();renderQEList();renderInc();
 </script>
 </body>
