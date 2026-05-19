@@ -638,14 +638,20 @@ function cardSpent(cid){
 function cardPaidTotal(cid){
   return (state.cardPayments||[]).filter(function(p){return p.cardId===cid;}).reduce(function(a,b){return a+b.amount;},0);
 }
+/* Saldo real = todos los gastos acumulados − todos los pagos acumulados */
+function cardBalance(cid){
+  var totalExp=(state.cardExpenses||[]).filter(function(e){return e.cardId===cid;}).reduce(function(a,b){return a+b.amount;},0);
+  var totalPaid=cardPaidTotal(cid);
+  return Math.max(0,totalExp-totalPaid);
+}
 function deletePayment(id){
   state.cardPayments=(state.cardPayments||[]).filter(function(x){return x.id!==id;});
   saveState();renderCards();renderDash();toast('Pago eliminado');
 }
 var BILL_CARD={'bill-plata':'tv6ie67h','bill-cya':'c9fyd3oa','bill-mp':'s2c6vdtx','bill-joy230':'c762eqhd','bill-joy777':'uywmukk6','bill-nu':'y9srj93y'};
-/* Monto VIVO de un compromiso: tarjetas usan gasto real del mes, resto usa el monto fijo */
+/* Monto VIVO de un compromiso: tarjetas usan saldo real (gastos − pagos), resto usa monto fijo */
 function liveBillAmt(b){
-  if(b.cat==='tarjeta'&&BILL_CARD[b.id]){var s=cardSpent(BILL_CARD[b.id]);return s;}
+  if(b.cat==='tarjeta'&&BILL_CARD[b.id]){return cardBalance(BILL_CARD[b.id]);}
   return b.amount;
 }
 function openPayModal(cid,name){
@@ -689,13 +695,6 @@ function savePayment(){
   if(cid&&cid!==''){
     if(!state.cardPayments)state.cardPayments=[];
     state.cardPayments.unshift({id:genId(),cardId:cid,amount:amount,date:date,note:note});
-    /* Si es pago de compromiso (no directo desde tarjetas), limpiar gastos del mes para reiniciar saldo */
-    if(billId&&billId.slice(0,5)!=='loan_'){
-      var _m=mk();
-      state.cardExpenses=(state.cardExpenses||[]).filter(function(e){
-        return !(e.cardId===cid&&(e.date||'').slice(0,7)===_m);
-      });
-    }
   }
   if(billId){
     if(billId.slice(0,5)==='loan_'){
@@ -719,9 +718,10 @@ function renderCards(){
   var el=document.getElementById('cards-grid');if(!el)return;
   var cards=state.cards||[];
   el.innerHTML=cards.map(function(c){
+    var bal=cardBalance(c.id);
     var spent=cardSpent(c.id);
-    var avail=c.limit-spent;
-    var pct=Math.min(100,Math.round(spent/c.limit*100));
+    var avail=Math.max(0,c.limit-bal);
+    var pct=Math.min(100,Math.round(bal/c.limit*100));
     var pc=pct>=90?'var(--rd)':pct>=70?'var(--am)':'var(--gr)';
     var ac=avail<c.limit*0.1?'rd':avail<c.limit*0.3?'am':'gn';
     var pays=(state.cardPayments||[]).filter(function(p){return p.cardId===c.id;}).slice(0,3);
@@ -735,10 +735,11 @@ function renderCards(){
       +'<div class="cv-body">'
       +'<div class="cv-header"><div><div class="cv-bank">'+c.bank+'</div><div class="cv-name">'+c.name+'</div></div>'
       +'<div class="cv-right"><div class="cv-lim-label">Límite</div><div class="cv-lim-val">'+mxn(c.limit)+'</div><div class="cv-payday">Día '+c.payDay+'</div></div></div>'
-      +'<div class="cv-amounts"><div class="cv-amt"><div class="cv-amt-lbl">Gastado este mes</div><div class="cv-amt-val rd">'+mxn(spent)+'</div></div>'
+      +'<div class="cv-amounts"><div class="cv-amt"><div class="cv-amt-lbl">Saldo (lo que debes)</div><div class="cv-amt-val rd">'+mxn(bal)+'</div></div>'
       +'<div class="cv-amt"><div class="cv-amt-lbl">Disponible</div><div class="cv-amt-val '+ac+'">'+mxn(avail)+'</div></div></div>'
+      +'<div style="font-size:11px;color:var(--tx3);margin:2px 0 6px">Gasto este mes: '+mxn(spent)+'</div>'
       +'<div class="cv-prog"><div class="cv-prog-fill" style="width:'+pct+'%;background:'+pc+'"></div></div>'
-      +'<div class="cv-pct"><span>'+pct+'% usado</span><span>Lím '+mxn(c.limit)+'</span></div>'
+      +'<div class="cv-pct"><span>'+pct+'% del límite usado</span><span>Lím '+mxn(c.limit)+'</span></div>'
       +'<button class="cv-btn pay" onclick="openPayModal(\''+c.id+'\',\''+c.name+'\')">+ Registrar pago</button>'
       +log+'</div></div>';
   }).join('');
