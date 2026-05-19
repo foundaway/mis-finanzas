@@ -950,13 +950,27 @@ document.getElementById('pay-dt').value=todayStr();
   if(!localStorage.getItem('finj_fix_v4')){
     if(!state.sofipos)state.sofipos=[];
     var _sofipos=[
-      {id:'sofipo-nu',name:'NU Cajita',bank:'nu',rate:0.13,balance:0},
+      {id:'sofipo-nu',name:'NU Cajita 13%',bank:'nu',rate:0.13,balance:0},
+      {id:'sofipo-nu2',name:'NU Cajita 6.75%',bank:'nu',rate:0.0675,balance:0},
       {id:'sofipo-mp',name:'MP Apartado',bank:'mp',rate:0.13,balance:0}
     ];
     _sofipos.forEach(function(s){
       if(!state.sofipos.find(function(x){return x.id===s.id;}))state.sofipos.push(s);
     });
     saveState();localStorage.setItem('finj_fix_v4','1');
+  }
+  if(!localStorage.getItem('finj_fix_v5')){
+    if(!state.sofipos)state.sofipos=[];
+    if(!state.sofipos.find(function(x){return x.id==='sofipo-nu2';})){
+      var _nuIdx=state.sofipos.findIndex(function(x){return x.id==='sofipo-nu';});
+      var _nu2={id:'sofipo-nu2',name:'NU Cajita 6.75%',bank:'nu',rate:0.0675,balance:0};
+      if(_nuIdx>=0)state.sofipos.splice(_nuIdx+1,0,_nu2);
+      else state.sofipos.unshift(_nu2);
+      /* also rename existing nu cajita to distinguish it */
+      var _nu1=state.sofipos.find(function(x){return x.id==='sofipo-nu';});
+      if(_nu1&&_nu1.name==='NU Cajita')_nu1.name='NU Cajita 13%';
+    }
+    saveState();localStorage.setItem('finj_fix_v5','1');
   }
 })();
 
