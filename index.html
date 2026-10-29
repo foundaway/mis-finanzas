@@ -196,8 +196,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <p>Tus datos solo se guardan en este celular. Descarga un respaldo de vez en cuando, o impórtalo en otro dispositivo.</p>
     <div class="ma" style="justify-content:stretch">
       <button class="bcn" style="flex:1" onclick="exportBackup()">Exportar</button>
-      <label class="bok" style="flex:1;text-align:center">Importar<input type="file" accept="application/json,.json" onchange="importBackup(this)" style="display:none"></label>
+      <label class="bok" style="flex:1;text-align:center">Importar archivo<input type="file" id="bk-file" accept="application/json,.json" onchange="importBackup(this)" style="display:none"></label>
     </div>
+    <textarea id="bk-text" hidden rows="5" style="width:100%;margin-top:8px;padding:8px;border:1px solid var(--bd2);border-radius:var(--rs);background:var(--s3);color:var(--tx);font-family:monospace;font-size:11px" placeholder="Pega aquí el texto de tu respaldo" aria-label="Texto del respaldo"></textarea>
+    <button class="bcn" style="width:100%;margin-top:6px" onclick="importPasted()">Importar texto pegado</button>
   </div>
 </div>
 
@@ -375,6 +377,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </button>
 </nav>
 
+<div class="ov" id="ov-ask">
+  <div class="mdl">
+    <h3 id="ask-title">¿Seguro?</h3>
+    <p id="ask-msg"></p>
+    <div class="ma">
+      <button class="bcn" id="ask-no">Cancelar</button>
+      <button class="bok" id="ask-yes">Sí, continuar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -466,6 +479,18 @@ function cardName(id){
   if(id==='debito')return 'Debito';
   var c=(state.cards||[]).find(function(x){return x.id===id;});
   return c?c.name:id;
+}
+
+/* ── CONFIRMACIÓN DENTRO DE LA APP ── */
+function ask(title,msg,yes,onYes){
+  var ov=document.getElementById('ov-ask');
+  document.getElementById('ask-title').textContent=title;
+  document.getElementById('ask-msg').textContent=msg;
+  var by=document.getElementById('ask-yes'),bn=document.getElementById('ask-no');
+  by.textContent=yes||'Sí, continuar';
+  by.onclick=function(){ov.classList.remove('open');onYes();};
+  bn.onclick=function(){ov.classList.remove('open');};
+  ov.classList.add('open');
 }
 
 /* ── TOAST ── */
@@ -564,7 +589,7 @@ function toggleBillPaid(id){
   var idx=b.paid.indexOf(m);if(idx>=0)b.paid.splice(idx,1);else b.paid.push(m);
   saveState();renderBills();renderDash();
 }
-function deleteBill(id){if(!confirm('Eliminar?'))return;state.bills=(state.bills||[]).filter(function(x){return x.id!==id;});saveState();renderBills();}
+function deleteBill(id){var b=(state.bills||[]).find(function(x){return x.id===id;});ask('Eliminar compromiso','Se borrará "'+(b?b.name:'')+'" de tu lista.','Eliminar',function(){state.bills=(state.bills||[]).filter(function(x){return x.id!==id;});saveState();renderBills();renderDash();toast('Compromiso eliminado');});}
 function toggleLoanPaid(key,num){
   var arr=key==='a'?'loanAPaid':'loanBPaid';
   if(!state[arr])state[arr]=[];
@@ -898,26 +923,34 @@ document.getElementById('pay-dt').value=todayStr();
 /* ── RESPALDO (exportar / importar JSON) ── */
 function exportBackup(){
   var data=JSON.stringify({state:state,ts:Date.now()},null,2);
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
-  a.download='finanzas-respaldo-'+todayStr()+'.json';
-  document.body.appendChild(a);a.click();a.remove();
-  toast('Respaldo descargado');
+  var box=document.getElementById('bk-text');
+  box.value=data;box.hidden=false;
+  var done=function(){toast('Respaldo copiado. Pégalo en una nota o archivo para guardarlo');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(data).then(done,function(){box.focus();box.select();toast('Selecciona y copia el texto del respaldo');});
+  }else{box.focus();box.select();toast('Selecciona y copia el texto del respaldo');}
+  try{var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));a.download='finanzas-respaldo-'+todayStr()+'.json';document.body.appendChild(a);a.click();a.remove();}catch(e){}
+}
+function importPasted(){
+  var t=document.getElementById('bk-text').value.trim();
+  if(!t){document.getElementById('bk-text').hidden=false;toast('Pega el texto del respaldo en el cuadro y vuelve a tocar');return;}
+  var blob=new Blob([t],{type:'application/json'});
+  importBackup({files:[blob],value:''});
 }
 function importBackup(input){
   var f=input.files&&input.files[0];if(!f)return;
   var r=new FileReader();
   r.onload=function(){
-    try{
-      var j=JSON.parse(r.result),st=j.state||j;
-      if(!st||!Array.isArray(st.cards)||!Array.isArray(st.bills))throw new Error('archivo no reconocido');
-      if(!confirm('Esto reemplaza los datos de este celular por los del respaldo. ¿Continuar?')){input.value='';return;}
+    input.value='';
+    var st;
+    try{var j=JSON.parse(r.result);st=j.state||j;if(!st||!Array.isArray(st.cards)||!Array.isArray(st.bills))throw new Error('archivo no reconocido');}
+    catch(e){toast('No se pudo importar: '+e.message);return;}
+    document.getElementById('ov-setup').classList.remove('open');
+    ask('Importar respaldo','Esto reemplaza los datos guardados aquí por los del respaldo.','Importar',function(){
       state=st;saveState();loanTables();fillCardSelect();
-      document.getElementById('ov-setup').classList.remove('open');
       renderDash();renderBills();renderCards();renderLoans();renderQEList();renderInc();renderSavings();
       toast('Respaldo importado ✓');
-    }catch(e){toast('No se pudo importar: '+e.message);}
-    input.value='';
+    });
   };
   r.readAsText(f);
 }
